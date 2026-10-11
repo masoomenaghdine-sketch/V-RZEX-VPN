@@ -163,6 +163,10 @@ android {
 }
 
 dependencies {
+    // Psiphon for Aether is built and packaged as a separate executable by compile-psiphon.sh.
+    // Do not add ca.psiphon:psiphontunnel here: its gomobile go.* classes and libgojni.so
+    // collide with those already bundled in libv2ray.aar. VXV remains explicitly pending until
+    // its engine integration uses the existing isolated Aether/Psiphon process path.
     // Core Libraries
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar", "*.jar"))))
 

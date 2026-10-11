@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">PattNG</string>
+    <string name="vxv_menu_title" translatable="false">VXV</string>
+    <string name="vxv_screen_title">بخش مستقل VXV</string>
+    <string name="vxv_engine_pending">VXV تونل مستقل Psiphon را اجرا می‌کند و فقط پس از آماده‌شدن تونل، اتصال را فعال نشان می‌دهد.</string>
+    <string name="vxv_switch_explanation">اگر یک پروفایل اصلی انتخاب شده باشد، با بازگشت به برنامهٔ اصلی همان پروفایل دوباره راه‌اندازی می‌شود.</string>
+    <string name="vxv_return_main">بازگشت به برنامهٔ اصلی</string>
+    <string name="vxv_stop_main_failed">توقف هستهٔ اصلی تأیید نشد؛ برای جلوگیری از تداخل هسته‌ها، بخش VXV باز نشد.</string>
+    <string name="app_name" translatable="false">VØRZEX VPN</string>
     <string name="app_widget_name">تعویض</string>
     <string name="app_tile_name">تعویض</string>
     <string name="app_tile_first_use">برای اولین استفاده از این قابلیت، لطفاً ابتدا از داخل برنامه یک سرور اضافه کنید</string>

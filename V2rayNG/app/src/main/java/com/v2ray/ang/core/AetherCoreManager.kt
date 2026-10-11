@@ -816,6 +816,26 @@ object AetherCoreManager {
     suspend fun awaitListening(timeoutMs: Long): Boolean =
         awaitReady(timeoutMs, READY_POLL_MS, { isRunning }, { session?.let { it.wordSeen && answersSocks(it.port) } == true })
 
+    /**
+     * Waits for the live session from the UI process. The in-memory [session] belongs to the
+     * daemon process, so [awaitListening] cannot be used by an Activity in the main process.
+     * Read the daemon-owned session arguments from /proc and probe its SOCKS listener instead.
+     */
+    suspend fun awaitSessionListening(context: Context, timeoutMs: Long): Boolean =
+        withTimeoutOrNull(timeoutMs) {
+            while (true) {
+                val arguments = sessionArguments(context)
+                val isPsiphonOnly = arguments?.let { psiphonModeOf(it) == AetherPsiphon.ONLY } == true
+                val port = arguments?.let(::listenerPortOf)
+                if (isPsiphonOnly && port != null && withContext(Dispatchers.IO) { answersSocks(port) }) {
+                    return@withTimeoutOrNull true
+                }
+                delay(READY_POLL_MS)
+            }
+            @Suppress("UNREACHABLE_CODE")
+            false
+        } ?: false
+
     internal suspend fun awaitReady(
         timeoutMs: Long,
         pollMs: Long,

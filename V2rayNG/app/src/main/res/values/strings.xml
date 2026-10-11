@@ -1,6 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">PattNG</string>
+    <string name="vxv_menu_title" translatable="false">VXV</string>
+    <string name="vxv_screen_title">VXV · Psiphon mode</string>
+    <string name="vxv_engine_pending">VXV starts its separate Psiphon tunnel and reports connected only after the local tunnel is ready.</string>
+    <string name="vxv_switch_explanation">Android allows one full-device VPN tunnel at a time. VXV stops the main tunnel first and restores it only if it was running before.</string>
+    <string name="vxv_return_main">Return to main app</string>
+    <string name="vxv_stop_main_failed">The main VPN did not confirm that it stopped. VXV was not opened to avoid core conflicts.</string>
+    <string name="vxv_start">Start VXV</string>
+    <string name="vxv_connecting">Starting Psiphon and waiting for its tunnel to become ready…</string>
+    <string name="vxv_connected">Connected: Psiphon reports that its tunnel is ready.</string>
+    <string name="vxv_disconnected">VXV is disconnected.</string>
+    <string name="vxv_stopping">Stopping VXV…</string>
+    <string name="vxv_engine_unavailable">The Psiphon/Aether engine is not available in this APK for this device architecture.</string>
+    <string name="vxv_profile_create_failed">Could not prepare the temporary VXV profile.</string>
+    <string name="vxv_permission_denied">VPN permission was not granted. Tap Start VXV to try again, or return to the main app.</string>
+    <string name="vxv_start_failed">Psiphon did not connect. Check the app log and try again.</string>
+    <string name="vxv_stop_failed">VXV has not confirmed that its tunnel stopped yet. Stay here and try returning again.</string>
+    <string name="app_name" translatable="false">VØRZEX VPN</string>
     <string name="app_widget_name">Switch</string>
     <string name="app_tile_name">Switch</string>
     <string name="app_tile_first_use">Add a profile in the app before using this feature.</string>

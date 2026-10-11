@@ -9,13 +9,14 @@ on:
   push:
     branches:
       - master
+      - feature/vxv-isolated-switch
 
 permissions:
   contents: write
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       # The stable release aether's own release workflow built with; pinned so a new stable
       # release cannot change or break the release build on its own. Bump it together with
@@ -95,7 +96,7 @@ jobs:
         key: libaether-${{ runner.os }}-${{ env.NDK_HOME }}-${{ env.RUST_TOOLCHAIN }}-${{ hashFiles('.git/modules/aether/HEAD') }}-${{ hashFiles('compile-aether.sh') }}
 
     - name: Install Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v6
       with:
         go-version: ${{ env.GO_VERSION }}
         # The client is built from a checkout of its own; there is no go.sum here to cache by.
@@ -178,23 +179,94 @@ jobs:
         distribution: 'temurin'
         java-version: '21'
 
-    - name: Decode Keystore
-      uses: timheuer/base64-to-file@v2.0.0
-      id: android_keystore
-      with:
-        fileName: "android_keystore.jks"
-        encodedString: ${{ secrets.APP_KEYSTORE_BASE64 }}
+    - name: Check release signing configuration
+      id: signing_check
+      env:
+        APP_KEYSTORE_BASE64: ${{ secrets.APP_KEYSTORE_BASE64 }}
+        APP_KEYSTORE_PASSWORD: ${{ secrets.APP_KEYSTORE_PASSWORD }}
+        APP_KEYSTORE_ALIAS: ${{ secrets.APP_KEYSTORE_ALIAS }}
+        APP_KEY_PASSWORD: ${{ secrets.APP_KEY_PASSWORD }}
+      run: |
+        if [ -n "$APP_KEYSTORE_BASE64" ] && [ -n "$APP_KEYSTORE_PASSWORD" ] && [ -n "$APP_KEYSTORE_ALIAS" ] && [ -n "$APP_KEY_PASSWORD" ]; then
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "configured=false" >> "$GITHUB_OUTPUT"
+        fi
 
-    - name: Build APK
+    - name: Decode Keystore
+      if: ${{ steps.signing_check.outputs.configured == 'true' }}
+      id: android_keystore
+      env:
+        APP_KEYSTORE_BASE64: ${{ secrets.APP_KEYSTORE_BASE64 }}
+      run: |
+        set -euo pipefail
+        KEYSTORE_PATH="$RUNNER_TEMP/android_keystore.jks"
+        printf '%s' "$APP_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+        if [ ! -s "$KEYSTORE_PATH" ]; then
+          echo "::error::Decoded keystore file is empty."
+          exit 1
+        fi
+        echo "filePath=$KEYSTORE_PATH" >> "$GITHUB_OUTPUT"
+        echo "Decoded keystore file ($(( $(wc -c < "$KEYSTORE_PATH") )) bytes)."
+
+    - name: Verify Android keystore
+      id: keystore_verify
+      if: ${{ steps.signing_check.outputs.configured == 'true' }}
+      continue-on-error: true
+      env:
+        APP_KEYSTORE_PASSWORD: ${{ secrets.APP_KEYSTORE_PASSWORD }}
+        APP_KEYSTORE_ALIAS: ${{ secrets.APP_KEYSTORE_ALIAS }}
+      run: |
+        set +e
+        keytool -list -keystore "${{ steps.android_keystore.outputs.filePath }}" -storepass "$APP_KEYSTORE_PASSWORD" -alias "$APP_KEYSTORE_ALIAS"
+        result=$?
+        if [ "$result" -eq 0 ]; then
+          echo "Android signing keystore and alias verified."
+        else
+          echo "::error::Keystore check failed (exit $result). The secret file may be truncated/invalid, the store password may not match, or the alias may be wrong. No secret values were printed."
+        fi
+        exit "$result"
+
+    - name: Run tests and license report
       run: |
         cd ${{ github.workspace }}/V2rayNG
         echo "sdk.dir=${ANDROID_HOME}" > local.properties
         chmod 755 gradlew
-        # The JVM unit tests are the only automated check of the Kotlin logic; a failure stops the
-        # build before anything is assembled or signed.
+        # Run the same unit tests and license report whether or not signing secrets are configured.
         ./gradlew :app:testPlaystoreDebugUnitTest
         ./gradlew licenseFdroidReleaseReport
+
+    - name: Build signed release APK
+      if: ${{ steps.signing_check.outputs.configured == 'true' && steps.keystore_verify.outcome == 'success' }}
+      run: |
+        cd ${{ github.workspace }}/V2rayNG
         ./gradlew assembleRelease -PpattngVersion="${{ inputs.release_tag }}" -Pandroid.injected.signing.store.file=${{ steps.android_keystore.outputs.filePath }} -Pandroid.injected.signing.store.password=${{ secrets.APP_KEYSTORE_PASSWORD }} -Pandroid.injected.signing.key.alias=${{ secrets.APP_KEYSTORE_ALIAS }} -Pandroid.injected.signing.key.password=${{ secrets.APP_KEY_PASSWORD }}
+
+    - name: Build unsigned release APK (CI when signing secrets are missing or invalid)
+      if: ${{ steps.signing_check.outputs.configured != 'true' || steps.keystore_verify.outcome == 'failure' }}
+      run: |
+        cd ${{ github.workspace }}/V2rayNG
+        echo "Signing secrets are missing or the keystore could not be verified; building unsigned release APK for CI validation."
+        ./gradlew assembleRelease -PpattngVersion="${{ inputs.release_tag }}"
+
+    - name: Sign fallback APKs with temporary CI key
+      if: ${{ steps.signing_check.outputs.configured != 'true' || steps.keystore_verify.outcome == 'failure' }}
+      run: |
+        set -euo pipefail
+        APK_DIR="${{ github.workspace }}/V2rayNG/app/build/outputs/apk"
+        KEYSTORE_PATH="$RUNNER_TEMP/ci-signing-key.jks"
+        SIGNING_PASSWORD="$(openssl rand -hex 24)"
+        keytool -genkeypair -noprompt -keystore "$KEYSTORE_PATH" \
+          -storepass "$SIGNING_PASSWORD" -keypass "$SIGNING_PASSWORD" \
+          -alias ci-temporary -keyalg RSA -keysize 2048 -validity 3650 \
+          -dname "CN=VORZEX CI Temporary,O=VORZEX,C=US"
+        find "$APK_DIR" -path '*/release/*.apk' -type f -print0 | while IFS= read -r -d '' apk; do
+          "$ANDROID_HOME/build-tools/37.0.0/apksigner" sign \
+            --ks "$KEYSTORE_PATH" --ks-key-alias ci-temporary \
+            --ks-pass "pass:$SIGNING_PASSWORD" --key-pass "pass:$SIGNING_PASSWORD" "$apk"
+          "$ANDROID_HOME/build-tools/37.0.0/apksigner" verify "$apk"
+          echo "Signed and verified fallback APK: $(basename "$apk")"
+        done
     
     - name: Check the native libraries in the APKs
       run: |

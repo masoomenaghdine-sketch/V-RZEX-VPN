@@ -52,8 +52,13 @@ import com.v2ray.ang.util.Utils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 
 class MainActivity : HelperBaseComponentActivity() {
+
+    @Volatile
+    private var openingVXV = false
 
     private val mainViewModel: MainViewModel by viewModels {
         MainViewModel.Factory(application, MainRepository(application as AngApplication))
@@ -100,6 +105,8 @@ class MainActivity : HelperBaseComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        // A return from VXV allows a fresh switch request.
+        openingVXV = false
         // The service can have gone away while the screen was not shown, without a word if its process died.
         mainViewModel.onAction(MainAction.RefreshServiceState)
     }
@@ -127,7 +134,57 @@ class MainActivity : HelperBaseComponentActivity() {
                 }
             },
             onNavigate = { route -> navigateTo(route) },
+            onOpenVXV = { openVXV() },
         )
+    }
+
+    /** Open VXV only after the main service has confirmed that it stopped. */
+    private fun openVXV() {
+        // Compose can deliver repeated taps while a service stop is still in flight.
+        // Only one handover attempt may be pending at a time.
+        if (openingVXV) return
+        openingVXV = true
+        val state = mainViewModel.uiState.value
+        val wasRunning = state.isRunning
+        // Restore only if the main service was actually running before entering VXV.
+        // A merely selected profile must not cause a previously stopped VPN to start on exit.
+        if (wasRunning && state.selectedGuid.isNullOrBlank()) {
+            openingVXV = false
+            toastError(R.string.vxv_stop_main_failed)
+            return
+        }
+        val shouldRestartMain = wasRunning && !state.selectedGuid.isNullOrBlank()
+        val intent = Intent(this, VXVActivity::class.java).apply {
+            putExtra(VXVActivity.EXTRA_RESTORE_MAIN, shouldRestartMain)
+            putExtra(VXVActivity.EXTRA_MAIN_GUID, state.selectedGuid)
+        }
+        if (!wasRunning) {
+            try {
+                startActivity(intent)
+            } catch (e: Exception) {
+                openingVXV = false
+                toastError(R.string.vxv_stop_main_failed)
+            }
+            return
+        }
+
+        LauncherManager.stopService(this)
+        lifecycleScope.launch {
+            val stopped = withTimeoutOrNull(5_000) {
+                mainViewModel.uiState.first { !it.isRunning }
+            } != null
+            if (stopped) {
+                try {
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    openingVXV = false
+                    toastError(R.string.vxv_stop_main_failed)
+                }
+            } else {
+                openingVXV = false
+                toastError(R.string.vxv_stop_main_failed)
+            }
+        }
     }
 
     private fun shareToClipboard(guid: String): Boolean =

@@ -124,6 +124,7 @@ class CoreVpnService : VpnService(), ServiceControl {
 
         // Start LAN sharing if enabled in settings
         RootLanSharing.startClientSharing(this)
+        startVpnUsageTracking()
     }
 
     override fun stopService() {
@@ -338,6 +339,7 @@ class CoreVpnService : VpnService(), ServiceControl {
     }
 
     private fun stopAllService(isForced: Boolean = true) {
+        stopVpnUsageTracking()
 //        val configName = defaultDPreference.getPrefString(PREF_CURR_CONFIG_GUID, "")
 //        val emptyInfo = VpnNetworkInfo()
 //        val info = loadVpnNetworkInfo(configName, emptyInfo)!! + (lastNetworkInfo ?: emptyInfo)
@@ -378,6 +380,23 @@ class CoreVpnService : VpnService(), ServiceControl {
                 LogUtil.e(AppConfig.TAG, "StartCore-VPN: Failed to close interface", e)
             }
         }
+    }
+
+    private fun startVpnUsageTracking() {
+        val startedAt = MmkvManager.decodeSettingsLong(AppConfig.PREF_VPN_USAGE_STARTED_AT, 0L)
+        if (startedAt <= 0L) {
+            MmkvManager.encodeSettings(AppConfig.PREF_VPN_USAGE_STARTED_AT, System.currentTimeMillis())
+        }
+    }
+
+    private fun stopVpnUsageTracking() {
+        val startedAt = MmkvManager.decodeSettingsLong(AppConfig.PREF_VPN_USAGE_STARTED_AT, 0L)
+        if (startedAt <= 0L) return
+
+        val elapsed = (System.currentTimeMillis() - startedAt).coerceAtLeast(0L)
+        val savedTotal = MmkvManager.decodeSettingsLong(AppConfig.PREF_VPN_USAGE_TOTAL_MS, 0L)
+        MmkvManager.encodeSettings(AppConfig.PREF_VPN_USAGE_TOTAL_MS, savedTotal + elapsed)
+        MmkvManager.encodeSettings(AppConfig.PREF_VPN_USAGE_STARTED_AT, 0L)
     }
 
     fun tryLockStart(): Boolean {
