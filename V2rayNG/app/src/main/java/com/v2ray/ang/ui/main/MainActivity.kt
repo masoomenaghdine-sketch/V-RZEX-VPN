@@ -52,6 +52,8 @@ import com.v2ray.ang.util.Utils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 
 class MainActivity : HelperBaseComponentActivity() {
 
@@ -127,7 +129,34 @@ class MainActivity : HelperBaseComponentActivity() {
                 }
             },
             onNavigate = { route -> navigateTo(route) },
+            onOpenVXV = { openVXV() },
         )
+    }
+
+    /** Open VXV only after the main service has confirmed that it stopped. */
+    private fun openVXV() {
+        val state = mainViewModel.uiState.value
+        val wasRunning = state.isRunning
+        val intent = Intent(this, VXVActivity::class.java).apply {
+            putExtra(VXVActivity.EXTRA_RESTORE_MAIN, wasRunning)
+            putExtra(VXVActivity.EXTRA_MAIN_GUID, state.selectedGuid)
+        }
+        if (!wasRunning) {
+            startActivity(intent)
+            return
+        }
+
+        LauncherManager.stopService(this)
+        lifecycleScope.launch {
+            val stopped = withTimeoutOrNull(5_000) {
+                mainViewModel.uiState.first { !it.isRunning }
+            } != null
+            if (stopped) {
+                startActivity(intent)
+            } else {
+                toastError(R.string.vxv_stop_main_failed)
+            }
+        }
     }
 
     private fun shareToClipboard(guid: String): Boolean =
