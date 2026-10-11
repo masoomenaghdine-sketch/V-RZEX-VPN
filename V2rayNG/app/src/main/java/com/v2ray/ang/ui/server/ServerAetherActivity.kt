@@ -83,6 +83,9 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 
 class ServerAetherActivity : BaseServerActivity() {
+    companion object {
+        const val EXTRA_TOR_QUICK_SETUP = "tor_quick_setup"
+    }
 
     override val serverConfigType: EConfigType = EConfigType.AETHER
 
@@ -105,7 +108,15 @@ class ServerAetherActivity : BaseServerActivity() {
     @Composable
     override fun EditorContent() {
         val uiState = rememberSaveable(saver = ServerUiState.Saver) {
-            ServerUiState.from(initialConfig = initialConfig)
+            ServerUiState.from(initialConfig = initialConfig).apply {
+                if (intent.getBooleanExtra(EXTRA_TOR_QUICK_SETUP, false) && editGuid.isBlank()) {
+                    remarks = getString(R.string.vxv_tor_profile_name)
+                    aetherTor = AetherTor.ONLY.type
+                    aetherTorBridges = AetherTorBridges.AUTO.type
+                    aetherTorRelays = AetherTorRelays.AUTO.type
+                    aetherPsiphon = AetherPsiphon.OFF.type
+                }
+            }
         }.apply {
             configType = serverConfigType
         }

@@ -24,14 +24,8 @@ jobs:
       # release cannot change or break the release build on its own. Bump it together with
       # the aether submodule.
       RUST_TOOLCHAIN: "1.99.0"
-      # The Go line the Psiphon client's go.mod asks for, which also covers lyrebird's older one;
-      # aether/psiphon-build.sh and aether/pt-build.sh pin the programs themselves. Bump it when a
-      # bumped aether submodule pins a program that asks for a newer line.
+      # The Go line used by Aether's Psiphon client and Tor pluggable transports (lyrebird).
       GO_VERSION: "1.26"
-      # Required by the embedded Shir o Khorshid/Psiphon Android client.
-      PSIPHON_PROPAGATION_CHANNEL_ID: ${{ secrets.PSIPHON_PROPAGATION_CHANNEL_ID }}
-      PSIPHON_SPONSOR_ID: ${{ secrets.PSIPHON_SPONSOR_ID }}
-      PSIPHON_EMBEDDED_SERVER_LIST_FILE: ${{ github.workspace }}/V2rayNG/third_party/shirokhorshid/app/psiphon_servers.txt
 
     steps:
     - name: Checkout code
@@ -56,79 +50,6 @@ jobs:
         sed -i '10i\
         \
             ndkVersion = "30.0.16248370"' ${{ github.workspace }}/V2rayNG/app/build.gradle.kts
-
-    - name: Build embedded Psiphon tunnel-core AAR
-      uses: actions/checkout@v7
-      with:
-        repository: shirokhorshid/psiphon-tunnel-core
-        ref: df55f0ac0eed3d6846501744b7f086a42fcadfaf
-        path: psiphon-tunnel-core
-
-    - name: Set up Go for embedded Psiphon AAR
-      uses: actions/setup-go@v6
-      with:
-        go-version: '1.26.3'
-        cache: false
-
-    - name: Install Psiphon AAR build tools
-      run: |
-        echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "ndk;23.1.7779620" "platforms;android-30"
-        echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/23.1.7779620" >> $GITHUB_ENV
-        echo "GOPATH=${{ runner.temp }}/gopath" >> $GITHUB_ENV
-        echo "${{ runner.temp }}/gopath/bin" >> $GITHUB_PATH
-        mkdir -p "${{ runner.temp }}/gopath/src/github.com/Psiphon-Labs"
-        ln -s "$GITHUB_WORKSPACE/psiphon-tunnel-core" "${{ runner.temp }}/gopath/src/github.com/Psiphon-Labs/psiphon-tunnel-core"
-        mkdir -p "${{ runner.temp }}/gopath/src/golang.org/x"
-        cp -r psiphon-tunnel-core/MobileLibrary/go-mobile "${{ runner.temp }}/gopath/src/golang.org/x/mobile"
-        sed -i 's/golang.org\/x\/mobile\/cmd\/gobind@latest/golang.org\/x\/mobile\/cmd\/gobind/' "${{ runner.temp }}/gopath/src/golang.org/x/mobile/cmd/gomobile/init.go"
-
-    - name: Set up JDK 8 for gomobile
-      uses: actions/setup-java@v6.0.1
-      with:
-        distribution: temurin
-        java-version: '8'
-
-    - name: Generate embedded Psiphon AAR
-      env:
-        GO111MODULE: "off"
-      run: |
-        go install golang.org/x/mobile/cmd/gomobile
-        go install golang.org/x/mobile/cmd/gobind
-        gomobile init -v
-        cd "${{ runner.temp }}/gopath/src/github.com/Psiphon-Labs/psiphon-tunnel-core/MobileLibrary/Android"
-        BUILDDATE=$(date --iso-8601=seconds)
-        BUILDREPO=$(cd "$GITHUB_WORKSPACE/psiphon-tunnel-core" && git remote get-url origin)
-        BUILDREV=$(cd "$GITHUB_WORKSPACE/psiphon-tunnel-core" && git rev-parse --short HEAD)
-        LDFLAGS="-checklinkname=0 -s -w"
-        LDFLAGS="$LDFLAGS -X github.com/Psiphon-Labs/psiphon-tunnel-core/psiphon/common/buildinfo.buildDate=$BUILDDATE"
-        LDFLAGS="$LDFLAGS -X github.com/Psiphon-Labs/psiphon-tunnel-core/psiphon/common/buildinfo.buildRepo=$BUILDREPO"
-        LDFLAGS="$LDFLAGS -X github.com/Psiphon-Labs/psiphon-tunnel-core/psiphon/common/buildinfo.buildRev=$BUILDREV"
-        LDFLAGS="$LDFLAGS -X github.com/Psiphon-Labs/psiphon-tunnel-core/psiphon/common/buildinfo.goVersion=$(go version | perl -ne '/go(.*?)\s/ && print $1')"
-        LDFLAGS="$LDFLAGS -X github.com/Psiphon-Labs/psiphon-tunnel-core/psiphon/common/buildinfo.gomobileVersion=vendored"
-        LDFLAGS="$LDFLAGS -extldflags=-Wl,-z,max-page-size=16384,-z,common-page-size=16384"
-        export CGO_LDFLAGS="-Wl,-z,max-page-size=16384,-z,common-page-size=16384"
-        export GOCACHE=/tmp/go-cache
-        gomobile bind -v -target=android/arm,android/arm64,android/386,android/amd64 -tags="PSIPHON_ENABLE_INPROXY" -ldflags="$LDFLAGS" -o psi.aar github.com/Psiphon-Labs/psiphon-tunnel-core/MobileLibrary/psi
-        mkdir -p aar_tmp && cd aar_tmp
-        unzip -o ../psi.aar
-        cp ../PsiphonTunnel/AndroidManifest.xml .
-        mkdir -p res/xml
-        cp ../PsiphonTunnel/ca_psiphon_psiphontunnel_backup_rules.xml res/xml/
-        mkdir -p compiled_classes
-        javac -source 1.8 -target 1.8 -bootclasspath "$ANDROID_HOME/platforms/android-30/android.jar" -classpath classes.jar -d compiled_classes ../PsiphonTunnel/PsiphonTunnel.java
-        if [ -d compiled_classes ] && [ "$(ls -A compiled_classes)" ]; then
-          cd compiled_classes
-          jar uf ../classes.jar .
-          cd ..
-        fi
-        echo "-keep class ca.psiphon.** { *; }" >> proguard.txt
-        echo "-keep class psi.** { *; }" >> proguard.txt
-        rm -f ../ca.psiphon.aar
-        zip -r ../ca.psiphon.aar . -x '*.DS_Store'
-        cd ..
-        cp ca.psiphon.aar "$GITHUB_WORKSPACE/V2rayNG/third_party/shirokhorshid/app/libs/ca.psiphon.aar"
-        rm -rf aar_tmp psi.aar
-        echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/30.0.16248370" >> $GITHUB_ENV
 
     - name: Restore cached libhevtun
       id: cache-libhevtun-restore
