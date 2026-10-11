@@ -7,6 +7,15 @@ plugins {
 }
 
 buildscript {
+    repositories {
+        google()
+        maven {
+            name = "MavenCentralMirror"
+            url = uri("https://maven-central.storage-download.googleapis.com/maven2/")
+        }
+        mavenCentral()
+        gradlePluginPortal()
+    }
     dependencies {
         classpath(libs.gradle.license.plugin)
     }
