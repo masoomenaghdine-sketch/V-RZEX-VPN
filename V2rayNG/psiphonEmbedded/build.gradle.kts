@@ -133,7 +133,9 @@ android.sourceSets.getByName("main").java.srcDir(generatedEmbeddedValues.map { i
 
 dependencies {
     implementation(project(":psiphonTray"))
-    implementation(fileTree(mapOf("dir" to upstreamApp.resolve("libs"), "include" to listOf("*.jar", "*.aar"))))
+    implementation(fileTree(mapOf("dir" to upstreamApp.resolve("libs"), "include" to listOf("*.jar"))))
+    implementation(mapOf("name" to "ca.psiphon", "ext" to "aar"))
+    implementation(mapOf("name" to "jndcrash-release", "ext" to "aar"))
     implementation("androidx.multidex:multidex:2.0.1")
     implementation("androidx.appcompat:appcompat:1.2.0")
     implementation("com.google.android.material:material:1.2.0")
