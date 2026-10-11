@@ -54,6 +54,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class MainActivity : HelperBaseComponentActivity() {
+    companion object {
+        private const val VXV_PACKAGE = "com.shirokhorshid.vpn"
+        private const val VXV_PROJECT_URL = "https://github.com/shirokhorshid/shirokhorshid-android"
+        private const val VXV_SWITCH_PREFS = "vxv_switch_state"
+        private const val KEY_VXV_HANDOFF_ACTIVE = "handoff_active"
+        private const val KEY_RESTORE_XRAY = "restore_xray"
+    }
 
     private val mainViewModel: MainViewModel by viewModels {
         MainViewModel.Factory(application, MainRepository(application as AngApplication))
@@ -62,6 +69,13 @@ class MainActivity : HelperBaseComponentActivity() {
     private val requestVpnPermission =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             if (it.resultCode == RESULT_OK) startV2Ray()
+        }
+
+    // Activity-result callback is safer than restoring Xray on every onResume:
+    // VXV may merely be in the background and still own Android's VPN slot.
+    private val vxvLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            restoreXrayAfterVXV()
         }
 
     private val profileEditorLauncher =
@@ -143,13 +157,54 @@ class MainActivity : HelperBaseComponentActivity() {
         }
     }
 
+    private fun restoreXrayAfterVXV() {
+        val prefs = getSharedPreferences(VXV_SWITCH_PREFS, MODE_PRIVATE)
+        if (!prefs.getBoolean(KEY_VXV_HANDOFF_ACTIVE, false)) return
+
+        val shouldRestoreXray = prefs.getBoolean(KEY_RESTORE_XRAY, false)
+        // Clear before starting so repeated activity results cannot start Xray twice.
+        prefs.edit().clear().apply()
+        mainViewModel.onAction(MainAction.RefreshServiceState)
+        if (shouldRestoreXray) requestServiceStart()
+    }
+
     private fun navigateTo(destination: MainDestination) {
+        if (destination == MainDestination.VXV) {
+            // Keep the VPN engines mutually exclusive and never reuse Xray status for VXV.
+            val launchIntent = packageManager.getLaunchIntentForPackage(VXV_PACKAGE)
+            if (launchIntent == null) {
+                toast(R.string.vxv_not_installed)
+                Utils.openUri(this, VXV_PROJECT_URL)
+                return
+            }
+
+            val prefs = getSharedPreferences(VXV_SWITCH_PREFS, MODE_PRIVATE)
+            val wasXrayRunning = mainViewModel.uiState.value.isRunning
+            prefs.edit()
+                .putBoolean(KEY_VXV_HANDOFF_ACTIVE, true)
+                .putBoolean(KEY_RESTORE_XRAY, wasXrayRunning)
+                .apply()
+
+            // Stop only our own Xray service; profiles and settings remain untouched.
+            if (wasXrayRunning) LauncherManager.stopService(this)
+
+            try {
+                vxvLauncher.launch(launchIntent)
+            } catch (error: Exception) {
+                prefs.edit().clear().apply()
+                if (wasXrayRunning) requestServiceStart()
+                LogUtil.e(AppConfig.TAG, "Unable to launch VXV client", error)
+                toast(R.string.vxv_launch_failed)
+            }
+            return
+        }
         val intent = when (destination) {
             MainDestination.Subscriptions -> Intent(this, SubSettingActivity::class.java)
             MainDestination.PerAppProxy -> Intent(this, PerAppProxyActivity::class.java)
             MainDestination.Routing -> Intent(this, RoutingSettingActivity::class.java)
             MainDestination.UserAssets -> Intent(this, UserAssetActivity::class.java)
             MainDestination.Settings -> Intent(this, SettingsActivity::class.java)
+            MainDestination.VXV -> error("VXV is handled before building the settings intent")
             MainDestination.Logcat -> Intent(this, LogcatActivity::class.java)
             MainDestination.CheckUpdate -> Intent(this, CheckUpdateActivity::class.java)
             MainDestination.BackupRestore -> Intent(this, BackupActivity::class.java)
