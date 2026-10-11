@@ -75,7 +75,6 @@ jobs:
         echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "ndk;23.1.7779620" "platforms;android-30"
         echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/23.1.7779620" >> $GITHUB_ENV
         echo "GOPATH=${{ runner.temp }}/gopath" >> $GITHUB_ENV
-        echo "GO111MODULE=off" >> $GITHUB_ENV
         echo "${{ runner.temp }}/gopath/bin" >> $GITHUB_PATH
         mkdir -p "${{ runner.temp }}/gopath/src/github.com/Psiphon-Labs"
         ln -s "$GITHUB_WORKSPACE/psiphon-tunnel-core" "${{ runner.temp }}/gopath/src/github.com/Psiphon-Labs/psiphon-tunnel-core"
@@ -90,6 +89,8 @@ jobs:
         java-version: '8'
 
     - name: Generate embedded Psiphon AAR
+      env:
+        GO111MODULE: "off"
       run: |
         go install golang.org/x/mobile/cmd/gomobile
         go install golang.org/x/mobile/cmd/gobind
