@@ -195,11 +195,19 @@ jobs:
 
     - name: Decode Keystore
       if: ${{ steps.signing_check.outputs.configured == 'true' }}
-      uses: timheuer/base64-to-file@v2.0.0
       id: android_keystore
-      with:
-        fileName: "android_keystore.jks"
-        encodedString: ${{ secrets.APP_KEYSTORE_BASE64 }}
+      env:
+        APP_KEYSTORE_BASE64: ${{ secrets.APP_KEYSTORE_BASE64 }}
+      run: |
+        set -euo pipefail
+        KEYSTORE_PATH="$RUNNER_TEMP/android_keystore.jks"
+        printf '%s' "$APP_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+        if [ ! -s "$KEYSTORE_PATH" ]; then
+          echo "::error::Decoded keystore file is empty."
+          exit 1
+        fi
+        echo "filePath=$KEYSTORE_PATH" >> "$GITHUB_OUTPUT"
+        echo "Decoded keystore file ($(( $(wc -c < "$KEYSTORE_PATH") )) bytes)."
 
     - name: Verify Android keystore
       id: keystore_verify
