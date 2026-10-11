@@ -163,10 +163,10 @@ android {
 }
 
 dependencies {
-    // Independent Psiphon tunnel-core SDK for VXV. The VXV service/UI integration must
-    // use this SDK without replacing the existing Xray/v2fly/Aether core implementation.
-    implementation("ca.psiphon:psiphontunnel:2.0.41")
-
+    // Psiphon for Aether is built and packaged as a separate executable by compile-psiphon.sh.
+    // Do not add ca.psiphon:psiphontunnel here: its gomobile go.* classes and libgojni.so
+    // collide with those already bundled in libv2ray.aar. VXV remains explicitly pending until
+    // its engine integration uses the existing isolated Aether/Psiphon process path.
     // Core Libraries
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar", "*.jar"))))
 
