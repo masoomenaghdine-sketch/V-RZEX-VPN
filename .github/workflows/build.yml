@@ -65,7 +65,7 @@ jobs:
         path: psiphon-tunnel-core
 
     - name: Set up Go for embedded Psiphon AAR
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v6
       with:
         go-version: '1.26.3'
         cache: false
@@ -175,7 +175,7 @@ jobs:
         key: libaether-${{ runner.os }}-${{ env.NDK_HOME }}-${{ env.RUST_TOOLCHAIN }}-${{ hashFiles('.git/modules/aether/HEAD') }}-${{ hashFiles('compile-aether.sh') }}
 
     - name: Install Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v6
       with:
         go-version: ${{ env.GO_VERSION }}
         # The client is built from a checkout of its own; there is no go.sum here to cache by.
