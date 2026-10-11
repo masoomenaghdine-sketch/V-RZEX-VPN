@@ -1,6 +1,5 @@
 package com.v2ray.ang.ui.main
 
-import android.content.Intent
 import android.net.VpnService
 import android.os.Bundle
 import androidx.activity.compose.BackHandler
@@ -39,7 +38,6 @@ import com.v2ray.ang.enums.EConfigType
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.ui.base.BaseComponentActivity
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
