@@ -9,6 +9,7 @@ on:
   push:
     branches:
       - master
+      - feature/vxv-isolated-switch
 
 permissions:
   contents: write
