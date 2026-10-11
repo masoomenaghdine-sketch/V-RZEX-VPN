@@ -106,6 +106,17 @@ class VXVSwitchCoordinatorTest {
     }
 
     @Test
+    fun repeatedEntryRequestsDoNotStartPsiphonTwice() = runBlocking {
+        val engines = FakeEngines(mainRunning = false)
+        val coordinator = VXVSwitchCoordinator(engines)
+
+        coordinator.enterVXV()
+        coordinator.enterVXV()
+
+        assertEquals(1, engines.calls.count { it == "start-vxv" })
+    }
+
+    @Test
     fun previousMainProfileIsRestoredOnlyAfterPsiphonStops() = runBlocking {
         val engines = FakeEngines(mainRunning = true)
         val coordinator = VXVSwitchCoordinator(engines)
