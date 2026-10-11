@@ -30,6 +30,13 @@ class VorzexApiClient(
     private val baseUrl: HttpUrl = parseBaseUrl(baseUrl)
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
 
+    /** Lightweight connectivity probe; sends no installation or VPN profile data. */
+    suspend fun checkHealth(): Unit = get(
+        path = "health",
+        responseType = Unit::class.java,
+        requiresToken = false
+    )
+
     suspend fun registerInstallation(
         request: InstallationRegisterRequest
     ): InstallationRegisterResponse = post(
