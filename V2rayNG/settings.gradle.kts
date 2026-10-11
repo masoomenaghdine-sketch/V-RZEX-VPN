@@ -21,4 +21,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "v2rayNG"
-include(":app")
+include(":app", ":psiphonTray", ":psiphonEmbedded")
