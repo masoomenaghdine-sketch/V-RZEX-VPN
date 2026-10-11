@@ -2,6 +2,8 @@
 <resources>
     <string name="app_name" translatable="false">PattNG</string>
     <string name="vxv_title">VXV · Shir o Khorshid</string>
+    <string name="vxv_not_installed">The Shir o Khorshid VXV client is not installed. Opening its project page.</string>
+    <string name="vxv_launch_failed">Could not open VXV. The previous VPN state will be restored if it was active.</string>
     <string name="app_widget_name">Switch</string>
     <string name="app_tile_name">Switch</string>
     <string name="app_tile_first_use">Add a profile in the app before using this feature.</string>
