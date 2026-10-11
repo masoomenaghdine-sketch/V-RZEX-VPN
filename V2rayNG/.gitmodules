@@ -1,0 +1,3 @@
+[submodule "third_party/shirokhorshid"]
+	path = third_party/shirokhorshid
+	url = https://github.com/shirokhorshid/shirokhorshid-android.git
