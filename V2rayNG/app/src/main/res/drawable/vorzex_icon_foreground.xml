@@ -4,7 +4,7 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path android:fillColor="#08091D" android:pathData="M0,0h108v108h-108z"/>
+    <!-- Transparent foreground: adaptive-icon background is supplied separately. -->
     <path android:fillColor="#00000000" android:strokeColor="#244CFF" android:strokeWidth="1.5" android:pathData="M15,54a39,39 0,1 0,78 0a39,39 0,1 0,-78 0"/>
     <path android:fillColor="#00000000" android:strokeColor="#7A2CFF" android:strokeWidth="2" android:pathData="M18,55a36,18 -24,1 0,72 0a36,18 -24,1 0,-72 0"/>
     <path android:fillColor="#00000000" android:strokeColor="#00D8FF" android:strokeWidth="2" android:pathData="M13,53a41,17 -24,1 0,82 0a41,17 -24,1 0,-82 0"/>
