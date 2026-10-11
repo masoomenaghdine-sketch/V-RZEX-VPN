@@ -53,6 +53,7 @@ class VXVActivity : BaseComponentActivity() {
     private var mainProfileGuid: String? = null
     private var temporaryProfileGuid: String? = null
     private var startRequested = false
+    private var psiphonReady = false
     private var exitHandled = false
     private var localError by mutableStateOf<String?>(null)
 
@@ -138,6 +139,18 @@ class VXVActivity : BaseComponentActivity() {
         try {
             LauncherManager.startService(this, guid)
             mainViewModel.onAction(MainAction.RefreshServiceState)
+            lifecycleScope.launch {
+                // Do not label VXV active just because Android started the VPN service.
+                // Psiphon-only mode is ready only after its local listener accepts traffic.
+                psiphonReady = withTimeoutOrNull(50_000L) {
+                    AetherCoreManager.awaitListening(45_000L)
+                } == true
+                if (!psiphonReady && !exitHandled) {
+                    localError = getString(R.string.vxv_start_failed)
+                    LauncherManager.stopService(this@VXVActivity)
+                    mainViewModel.onAction(MainAction.RefreshServiceState)
+                }
+            }
         } catch (_: Exception) {
             localError = getString(R.string.vxv_start_failed)
         }
@@ -151,7 +164,7 @@ class VXVActivity : BaseComponentActivity() {
         val serviceStatus = state.status
         val statusText = when {
             localError != null -> localError!!
-            serviceStatus is MainStatus.Connected && state.isRunning -> getString(R.string.vxv_connected)
+            psiphonReady && serviceStatus is MainStatus.Connected && state.isRunning -> getString(R.string.vxv_connected)
             serviceStatus is MainStatus.Connecting -> serviceStatus.message
             state.isRunning -> getString(R.string.vxv_connecting)
             startRequested -> getString(R.string.vxv_start_failed)
