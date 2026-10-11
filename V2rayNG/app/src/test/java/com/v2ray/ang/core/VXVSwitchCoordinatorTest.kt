@@ -72,6 +72,17 @@ class VXVSwitchCoordinatorTest {
     }
 
     @Test
+    fun missingProfileAbortsBeforeStoppingRunningMain() = runBlocking {
+        val engines = FakeEngines(mainRunning = true, selectedGuid = null)
+        val coordinator = VXVSwitchCoordinator(engines)
+
+        val result = coordinator.enterVXV()
+
+        assertEquals(VXVSwitchCoordinator.Phase.FAILED, result.phase)
+        assertTrue(engines.calls.isEmpty())
+    }
+
+    @Test
     fun mainStopTimeoutPreventsVXVStart() = runBlocking {
         val engines = FakeEngines(mainRunning = true, mainStopSucceeds = false)
         val coordinator = VXVSwitchCoordinator(engines)
