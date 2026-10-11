@@ -143,7 +143,7 @@ class VXVActivity : BaseComponentActivity() {
                 // Do not label VXV active just because Android started the VPN service.
                 // Psiphon-only mode is ready only after its local listener accepts traffic.
                 psiphonReady = withTimeoutOrNull(50_000L) {
-                    AetherCoreManager.awaitListening(45_000L)
+                    AetherCoreManager.awaitSessionListening(this@VXVActivity, 45_000L)
                 } == true
                 if (!psiphonReady && !exitHandled) {
                     localError = getString(R.string.vxv_start_failed)
