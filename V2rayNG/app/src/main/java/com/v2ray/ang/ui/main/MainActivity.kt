@@ -54,6 +54,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class MainActivity : HelperBaseComponentActivity() {
+    companion object {
+        private const val VXV_PACKAGE = "com.shirokhorshid.vpn"
+        private const val VXV_PROJECT_URL = "https://github.com/shirokhorshid/shirokhorshid-android"
+        private const val VXV_SWITCH_PREFS = "vxv_switch_state"
+        private const val KEY_VXV_HANDOFF_ACTIVE = "handoff_active"
+        private const val KEY_VXV_PAUSED_AFTER_HANDOFF = "paused_after_handoff"
+        private const val KEY_RESTORE_XRAY = "restore_xray"
+    }
 
     private val mainViewModel: MainViewModel by viewModels {
         MainViewModel.Factory(application, MainRepository(application as AngApplication))
@@ -104,6 +112,29 @@ class MainActivity : HelperBaseComponentActivity() {
         mainViewModel.onAction(MainAction.RefreshServiceState)
     }
 
+    override fun onPause() {
+        // Record that VØRZEX actually left the foreground after handing off to VXV.
+        val prefs = getSharedPreferences(VXV_SWITCH_PREFS, MODE_PRIVATE)
+        if (prefs.getBoolean(KEY_VXV_HANDOFF_ACTIVE, false)) {
+            prefs.edit().putBoolean(KEY_VXV_PAUSED_AFTER_HANDOFF, true).apply()
+        }
+        super.onPause()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val prefs = getSharedPreferences(VXV_SWITCH_PREFS, MODE_PRIVATE)
+        val shouldHandleReturn = prefs.getBoolean(KEY_VXV_HANDOFF_ACTIVE, false) &&
+            prefs.getBoolean(KEY_VXV_PAUSED_AFTER_HANDOFF, false)
+        if (!shouldHandleReturn) return
+
+        val shouldRestoreXray = prefs.getBoolean(KEY_RESTORE_XRAY, false)
+        // Clear first so lifecycle callbacks cannot start Xray twice.
+        prefs.edit().clear().apply()
+        mainViewModel.onAction(MainAction.RefreshServiceState)
+        if (shouldRestoreXray) requestServiceStart()
+    }
+
     @Composable
     override fun ScreenContent() {
         BackHandler { moveTaskToBack(false) }
@@ -145,14 +176,32 @@ class MainActivity : HelperBaseComponentActivity() {
 
     private fun navigateTo(destination: MainDestination) {
         if (destination == MainDestination.VXV) {
-            // VXV opens the real Shir o Khorshid client when it is installed.
-            // This avoids presenting a fake "connected" state from the Xray service.
-            val shirOKhorshidPackage = "com.shirokhorshid.vpn"
-            val launchIntent = packageManager.getLaunchIntentForPackage(shirOKhorshidPackage)
-            if (launchIntent != null) {
+            // Keep the VPN engines mutually exclusive and never reuse Xray status for VXV.
+            val launchIntent = packageManager.getLaunchIntentForPackage(VXV_PACKAGE)
+            if (launchIntent == null) {
+                toast(R.string.vxv_not_installed)
+                Utils.openUri(this, VXV_PROJECT_URL)
+                return
+            }
+
+            val prefs = getSharedPreferences(VXV_SWITCH_PREFS, MODE_PRIVATE)
+            val wasXrayRunning = mainViewModel.uiState.value.isRunning
+            prefs.edit()
+                .putBoolean(KEY_VXV_HANDOFF_ACTIVE, true)
+                .putBoolean(KEY_VXV_PAUSED_AFTER_HANDOFF, false)
+                .putBoolean(KEY_RESTORE_XRAY, wasXrayRunning)
+                .apply()
+
+            // Stop only our own Xray service; profiles and settings remain untouched.
+            if (wasXrayRunning) LauncherManager.stopService(this)
+
+            try {
                 startActivity(launchIntent)
-            } else {
-                Utils.openUri(this, "https://github.com/shirokhorshid/shirokhorshid-android")
+            } catch (error: Exception) {
+                prefs.edit().clear().apply()
+                if (wasXrayRunning) requestServiceStart()
+                LogUtil.e(AppConfig.TAG, "Unable to launch VXV client", error)
+                toast(R.string.vxv_launch_failed)
             }
             return
         }
