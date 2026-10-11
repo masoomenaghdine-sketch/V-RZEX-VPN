@@ -98,6 +98,7 @@ android {
     sourceSets {
         getByName("main") {
             java.srcDirs("../third_party/shirokhorshid/app/src/main/java", "src/main/java")
+            java.srcDir(generatedEmbeddedValues.map { it.asFile.parentFile.parentFile.parentFile.parentFile })
             res.srcDirs("../third_party/shirokhorshid/app/src/main/res")
             assets.srcDirs("../third_party/shirokhorshid/app/src/main/assets")
             jniLibs.srcDirs("../third_party/shirokhorshid/app/src/main/jniLibs")
@@ -129,7 +130,6 @@ tasks.named("preBuild").configure {
     dependsOn(generateEmbeddedValues)
 }
 
-android.sourceSets.getByName("main").java.srcDir(generatedEmbeddedValues.map { it.asFile.parentFile.parentFile.parentFile.parentFile })
 
 dependencies {
     implementation(project(":psiphonTray"))
