@@ -164,7 +164,9 @@ class VXVActivity : BaseComponentActivity() {
         val serviceStatus = state.status
         val statusText = when {
             localError != null -> localError!!
-            psiphonReady && serviceStatus is MainStatus.Connected && state.isRunning -> getString(R.string.vxv_connected)
+            // Psiphon-only profiles may not emit the same MainStatus.Connected event as Xray profiles.
+            // The dedicated Psiphon SOCKS readiness probe is the authoritative VXV connected signal.
+            psiphonReady && state.isRunning -> getString(R.string.vxv_connected)
             serviceStatus is MainStatus.Connecting -> serviceStatus.message
             state.isRunning -> getString(R.string.vxv_connecting)
             startRequested -> getString(R.string.vxv_start_failed)
