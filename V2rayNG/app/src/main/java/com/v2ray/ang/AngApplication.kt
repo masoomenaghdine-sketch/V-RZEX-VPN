@@ -2,6 +2,7 @@ package com.v2ray.ang
 
 import android.app.Application
 import android.content.Context
+import android.provider.Settings
 import androidx.core.content.ContextCompat
 import androidx.work.Configuration
 import androidx.work.WorkManager
@@ -11,6 +12,8 @@ import com.v2ray.ang.handler.AppLocaleManager
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.ui.compose.ThemeManager
+import java.util.Locale
+import java.util.UUID
 
 class AngApplication : Application() {
     companion object {
@@ -31,12 +34,26 @@ class AngApplication : Application() {
         .build()
 
     /**
+     * Creates one stable local identifier on first launch. Only the last four Android ID
+     * characters are included; the full Android ID is never stored or displayed.
+     */
+    private fun ensureUserIdentity() {
+        if (!MmkvManager.decodeSettingsString(AppConfig.PREF_USER_ID).isNullOrBlank()) return
+
+        val androidId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID).orEmpty()
+        val deviceSuffix = androidId.takeLast(4).uppercase(Locale.ROOT).ifBlank { "0000" }
+        val randomSuffix = UUID.randomUUID().toString().replace("-", "").take(8).uppercase(Locale.ROOT)
+        MmkvManager.encodeSettings(AppConfig.PREF_USER_ID, "VZ-" + deviceSuffix + "-" + randomSuffix)
+    }
+
+    /**
      * Initializes the application.
      */
     override fun onCreate() {
         super.onCreate()
 
         MmkvManager.initialize(this)
+        ensureUserIdentity()
 
         AppLocaleManager.initialize(this)
 

@@ -20,6 +20,9 @@ object AppConfig {
     const val DEFAULT_SUBSCRIPTION_ID = "__default_subscription__"
 
     /** Preferences mapped to MMKV storage. */
+    const val PREF_USER_ID = "pref_user_info_id"
+    const val PREF_VPN_USAGE_TOTAL_MS = "pref_vpn_usage_total_ms"
+    const val PREF_VPN_USAGE_STARTED_AT = "pref_vpn_usage_started_at"
     const val PREF_SNIFFING_ENABLED = "pref_sniffing_enabled"
     const val PREF_ROUTE_ONLY_ENABLED = "pref_route_only_enabled"
     const val PREF_PER_APP_PROXY = "pref_per_app_proxy"
