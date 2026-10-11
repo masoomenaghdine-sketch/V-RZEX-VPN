@@ -91,6 +91,7 @@ class MainActivity : HelperBaseComponentActivity() {
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        setTheme(R.style.AppThemeDayNight_NoActionBar)
         super.onCreate(savedInstanceState)
         mainViewModel.onAction(MainAction.Initialize)
 
