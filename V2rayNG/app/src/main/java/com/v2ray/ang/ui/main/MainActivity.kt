@@ -55,8 +55,6 @@ import kotlinx.coroutines.withContext
 
 class MainActivity : HelperBaseComponentActivity() {
     companion object {
-        private const val VXV_PACKAGE = "com.shirokhorshid.vpn"
-        private const val VXV_PROJECT_URL = "https://github.com/shirokhorshid/shirokhorshid-android"
         private const val VXV_SWITCH_PREFS = "vxv_switch_state"
         private const val KEY_VXV_HANDOFF_ACTIVE = "handoff_active"
         private const val KEY_RESTORE_XRAY = "restore_xray"
@@ -171,12 +169,8 @@ class MainActivity : HelperBaseComponentActivity() {
     private fun navigateTo(destination: MainDestination) {
         if (destination == MainDestination.VXV) {
             // Keep the VPN engines mutually exclusive and never reuse Xray status for VXV.
-            val launchIntent = packageManager.getLaunchIntentForPackage(VXV_PACKAGE)
-            if (launchIntent == null) {
-                toast(R.string.vxv_not_installed)
-                Utils.openUri(this, VXV_PROJECT_URL)
-                return
-            }
+            // Launch the embedded Psiphon activity from this same APK.
+            val launchIntent = Intent(this, com.psiphon3.VXVActivity::class.java)
 
             val prefs = getSharedPreferences(VXV_SWITCH_PREFS, MODE_PRIVATE)
             val wasXrayRunning = mainViewModel.uiState.value.isRunning
