@@ -202,7 +202,9 @@ jobs:
         encodedString: ${{ secrets.APP_KEYSTORE_BASE64 }}
 
     - name: Verify Android keystore
+      id: keystore_verify
       if: ${{ steps.signing_check.outputs.configured == 'true' }}
+      continue-on-error: true
       env:
         APP_KEYSTORE_PASSWORD: ${{ secrets.APP_KEYSTORE_PASSWORD }}
         APP_KEYSTORE_ALIAS: ${{ secrets.APP_KEYSTORE_ALIAS }}
@@ -220,16 +222,16 @@ jobs:
         ./gradlew licenseFdroidReleaseReport
 
     - name: Build signed release APK
-      if: ${{ steps.signing_check.outputs.configured == 'true' }}
+      if: ${{ steps.signing_check.outputs.configured == 'true' && steps.keystore_verify.outcome == 'success' }}
       run: |
         cd ${{ github.workspace }}/V2rayNG
         ./gradlew assembleRelease -PpattngVersion="${{ inputs.release_tag }}" -Pandroid.injected.signing.store.file=${{ steps.android_keystore.outputs.filePath }} -Pandroid.injected.signing.store.password=${{ secrets.APP_KEYSTORE_PASSWORD }} -Pandroid.injected.signing.key.alias=${{ secrets.APP_KEYSTORE_ALIAS }} -Pandroid.injected.signing.key.password=${{ secrets.APP_KEY_PASSWORD }}
 
-    - name: Build unsigned release APK (CI without signing secrets)
-      if: ${{ steps.signing_check.outputs.configured != 'true' }}
+    - name: Build unsigned release APK (CI when signing secrets are missing or invalid)
+      if: ${{ steps.signing_check.outputs.configured != 'true' || steps.keystore_verify.outcome == 'failure' }}
       run: |
         cd ${{ github.workspace }}/V2rayNG
-        echo "Signing secrets are not configured; building unsigned release APK for CI validation."
+        echo "Signing secrets are missing or the keystore could not be verified; building unsigned release APK for CI validation."
         ./gradlew assembleRelease -PpattngVersion="${{ inputs.release_tag }}"
     
     - name: Check the native libraries in the APKs
