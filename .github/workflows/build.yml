@@ -108,7 +108,7 @@ jobs:
         LDFLAGS="$LDFLAGS -extldflags=-Wl,-z,max-page-size=16384,-z,common-page-size=16384"
         export CGO_LDFLAGS="-Wl,-z,max-page-size=16384,-z,common-page-size=16384"
         export GOCACHE=/tmp/go-cache
-        gomobile bind -v -target=android/arm,android/arm64 -tags="PSIPHON_ENABLE_INPROXY" -ldflags="$LDFLAGS" -o psi.aar github.com/Psiphon-Labs/psiphon-tunnel-core/MobileLibrary/psi
+        gomobile bind -v -target=android/arm,android/arm64,android/386,android/amd64 -tags="PSIPHON_ENABLE_INPROXY" -ldflags="$LDFLAGS" -o psi.aar github.com/Psiphon-Labs/psiphon-tunnel-core/MobileLibrary/psi
         mkdir -p aar_tmp && cd aar_tmp
         unzip -o ../psi.aar
         cp ../PsiphonTunnel/AndroidManifest.xml .
