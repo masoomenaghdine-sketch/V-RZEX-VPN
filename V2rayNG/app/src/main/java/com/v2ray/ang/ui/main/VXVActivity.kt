@@ -148,10 +148,11 @@ class VXVActivity : BaseComponentActivity() {
         val state by mainViewModel.uiState.collectAsState()
         BackHandler { returnToMain() }
 
+        val serviceStatus = state.status
         val statusText = when {
             localError != null -> localError!!
-            state.status is MainStatus.Connected && state.isRunning -> getString(R.string.vxv_connected)
-            state.status is MainStatus.Connecting -> state.status.message
+            serviceStatus is MainStatus.Connected && state.isRunning -> getString(R.string.vxv_connected)
+            serviceStatus is MainStatus.Connecting -> serviceStatus.message
             state.isRunning -> getString(R.string.vxv_connecting)
             startRequested -> getString(R.string.vxv_start_failed)
             else -> getString(R.string.vxv_disconnected)
