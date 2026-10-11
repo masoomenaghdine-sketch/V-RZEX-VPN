@@ -59,7 +59,6 @@ class MainActivity : HelperBaseComponentActivity() {
         private const val VXV_PROJECT_URL = "https://github.com/shirokhorshid/shirokhorshid-android"
         private const val VXV_SWITCH_PREFS = "vxv_switch_state"
         private const val KEY_VXV_HANDOFF_ACTIVE = "handoff_active"
-        private const val KEY_VXV_PAUSED_AFTER_HANDOFF = "paused_after_handoff"
         private const val KEY_RESTORE_XRAY = "restore_xray"
     }
 
@@ -70,6 +69,13 @@ class MainActivity : HelperBaseComponentActivity() {
     private val requestVpnPermission =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             if (it.resultCode == RESULT_OK) startV2Ray()
+        }
+
+    // Activity-result callback is safer than restoring Xray on every onResume:
+    // VXV may merely be in the background and still own Android's VPN slot.
+    private val vxvLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            restoreXrayAfterVXV()
         }
 
     private val profileEditorLauncher =
@@ -112,29 +118,6 @@ class MainActivity : HelperBaseComponentActivity() {
         mainViewModel.onAction(MainAction.RefreshServiceState)
     }
 
-    override fun onPause() {
-        // Record that VØRZEX actually left the foreground after handing off to VXV.
-        val prefs = getSharedPreferences(VXV_SWITCH_PREFS, MODE_PRIVATE)
-        if (prefs.getBoolean(KEY_VXV_HANDOFF_ACTIVE, false)) {
-            prefs.edit().putBoolean(KEY_VXV_PAUSED_AFTER_HANDOFF, true).apply()
-        }
-        super.onPause()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        val prefs = getSharedPreferences(VXV_SWITCH_PREFS, MODE_PRIVATE)
-        val shouldHandleReturn = prefs.getBoolean(KEY_VXV_HANDOFF_ACTIVE, false) &&
-            prefs.getBoolean(KEY_VXV_PAUSED_AFTER_HANDOFF, false)
-        if (!shouldHandleReturn) return
-
-        val shouldRestoreXray = prefs.getBoolean(KEY_RESTORE_XRAY, false)
-        // Clear first so lifecycle callbacks cannot start Xray twice.
-        prefs.edit().clear().apply()
-        mainViewModel.onAction(MainAction.RefreshServiceState)
-        if (shouldRestoreXray) requestServiceStart()
-    }
-
     @Composable
     override fun ScreenContent() {
         BackHandler { moveTaskToBack(false) }
@@ -174,6 +157,17 @@ class MainActivity : HelperBaseComponentActivity() {
         }
     }
 
+    private fun restoreXrayAfterVXV() {
+        val prefs = getSharedPreferences(VXV_SWITCH_PREFS, MODE_PRIVATE)
+        if (!prefs.getBoolean(KEY_VXV_HANDOFF_ACTIVE, false)) return
+
+        val shouldRestoreXray = prefs.getBoolean(KEY_RESTORE_XRAY, false)
+        // Clear before starting so repeated activity results cannot start Xray twice.
+        prefs.edit().clear().apply()
+        mainViewModel.onAction(MainAction.RefreshServiceState)
+        if (shouldRestoreXray) requestServiceStart()
+    }
+
     private fun navigateTo(destination: MainDestination) {
         if (destination == MainDestination.VXV) {
             // Keep the VPN engines mutually exclusive and never reuse Xray status for VXV.
@@ -188,7 +182,6 @@ class MainActivity : HelperBaseComponentActivity() {
             val wasXrayRunning = mainViewModel.uiState.value.isRunning
             prefs.edit()
                 .putBoolean(KEY_VXV_HANDOFF_ACTIVE, true)
-                .putBoolean(KEY_VXV_PAUSED_AFTER_HANDOFF, false)
                 .putBoolean(KEY_RESTORE_XRAY, wasXrayRunning)
                 .apply()
 
@@ -196,7 +189,7 @@ class MainActivity : HelperBaseComponentActivity() {
             if (wasXrayRunning) LauncherManager.stopService(this)
 
             try {
-                startActivity(launchIntent)
+                vxvLauncher.launch(launchIntent)
             } catch (error: Exception) {
                 prefs.edit().clear().apply()
                 if (wasXrayRunning) requestServiceStart()
