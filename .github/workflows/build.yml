@@ -25,6 +25,9 @@ jobs:
       # aether/psiphon-build.sh and aether/pt-build.sh pin the programs themselves. Bump it when a
       # bumped aether submodule pins a program that asks for a newer line.
       GO_VERSION: "1.26"
+      # Required by the embedded Shir o Khorshid/Psiphon Android client.
+      PSIPHON_PROPAGATION_CHANNEL_ID: ${{ secrets.PSIPHON_PROPAGATION_CHANNEL_ID }}
+      PSIPHON_SPONSOR_ID: ${{ secrets.PSIPHON_SPONSOR_ID }}
 
     steps:
     - name: Checkout code
