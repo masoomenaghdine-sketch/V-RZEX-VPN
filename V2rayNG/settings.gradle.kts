@@ -16,6 +16,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // Psiphon tunnel-core Android AAR distribution (used by the isolated VXV integration).
+        maven { url = uri("https://raw.github.com/Psiphon-Labs/psiphon-tunnel-core-Android-library/master") }
         maven { url = uri("https://jitpack.io") }
     }
 }
