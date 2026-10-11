@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       # The stable release aether's own release workflow built with; pinned so a new stable
       # release cannot change or break the release build on its own. Bump it together with
@@ -96,7 +96,7 @@ jobs:
         key: libaether-${{ runner.os }}-${{ env.NDK_HOME }}-${{ env.RUST_TOOLCHAIN }}-${{ hashFiles('.git/modules/aether/HEAD') }}-${{ hashFiles('compile-aether.sh') }}
 
     - name: Install Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v6
       with:
         go-version: ${{ env.GO_VERSION }}
         # The client is built from a checkout of its own; there is no go.sum here to cache by.
@@ -220,7 +220,7 @@ jobs:
       if: ${{ steps.signing_check.outputs.configured != 'true' }}
       run: |
         cd ${{ github.workspace }}/V2rayNG
-        echo "::notice::Signing secrets are not configured; building unsigned release APK for CI validation."
+        echo "Signing secrets are not configured; building unsigned release APK for CI validation."
         ./gradlew assembleRelease -PpattngVersion="${{ inputs.release_tag }}"
     
     - name: Check the native libraries in the APKs
