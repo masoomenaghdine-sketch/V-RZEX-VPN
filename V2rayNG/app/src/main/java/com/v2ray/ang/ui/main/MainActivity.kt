@@ -148,6 +148,7 @@ class MainActivity : HelperBaseComponentActivity() {
             // bundled core and bridge transports already built for this app.
             val intent = Intent(this, ServerAetherActivity::class.java).apply {
                 putExtra("createConfigType", EConfigType.AETHER.value)
+                putExtra("torNetworkMode", true)
             }
             profileEditorLauncher.launch(intent)
             return
