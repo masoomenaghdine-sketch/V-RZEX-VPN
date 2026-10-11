@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="vxv_menu_title" translatable="false">VXV</string>
+    <string name="vxv_screen_title">بخش مستقل VXV</string>
+    <string name="vxv_engine_pending">چارچوب جداگانهٔ VXV آماده شده، اما موتور اتصال مستقل شیر و خورشید/سایفون هنوز در این شاخه ادغام نشده است. این صفحه ادعای اتصال فعال VPN ندارد.</string>
+    <string name="vxv_switch_explanation">اگر هنگام ورود به VXV اتصال اصلی فعال بوده، ابتدا متوقف شده است. با بازگشت به برنامهٔ اصلی، همان پروفایل قبلی دوباره انتخاب و راه‌اندازی می‌شود.</string>
+    <string name="vxv_return_main">بازگشت به برنامهٔ اصلی</string>
+    <string name="vxv_stop_main_failed">توقف هستهٔ اصلی تأیید نشد؛ برای جلوگیری از تداخل هسته‌ها، بخش VXV باز نشد.</string>
     <string name="app_name" translatable="false">PattNG</string>
     <string name="app_widget_name">تعویض</string>
     <string name="app_tile_name">تعویض</string>
