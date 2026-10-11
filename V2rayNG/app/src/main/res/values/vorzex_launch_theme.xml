@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="VorzexLaunchTheme" parent="AppThemeDayNight.NoActionBar">
+        <item name="android:windowBackground">@drawable/vorzex_splash_background</item>
+        <item name="android:statusBarColor">@color/vorzex_icon_background</item>
+        <item name="android:navigationBarColor">@color/vorzex_icon_background</item>
+    </style>
+</resources>
