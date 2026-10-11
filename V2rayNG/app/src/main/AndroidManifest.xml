@@ -63,6 +63,7 @@
         <activity
             android:name="com.psiphon3.VXVActivity"
             android:exported="false"
+            android:label="@string/vxv_title"
             android:theme="@style/Theme.Psiphon.NoActionBar" />
 
         <service
