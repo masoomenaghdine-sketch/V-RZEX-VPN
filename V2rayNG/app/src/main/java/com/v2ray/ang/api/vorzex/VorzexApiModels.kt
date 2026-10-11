@@ -1,5 +1,7 @@
 package com.v2ray.ang.api.vorzex
 
+import com.google.gson.annotations.SerializedName
+
 /**
  * Wire contracts shared by the Android client and the separately deployed VØRZEX backend.
  *
@@ -18,11 +20,11 @@ data class InstallationRegisterResponse(
 )
 
 enum class ClientEventType(val wireValue: String) {
-    APP_STARTED("app_started"),
-    VPN_CONNECTING("vpn_connecting"),
-    VPN_CONNECTED("vpn_connected"),
-    VPN_DISCONNECTED("vpn_disconnected"),
-    HEARTBEAT("heartbeat")
+    @SerializedName("app_started") APP_STARTED("app_started"),
+    @SerializedName("vpn_connecting") VPN_CONNECTING("vpn_connecting"),
+    @SerializedName("vpn_connected") VPN_CONNECTED("vpn_connected"),
+    @SerializedName("vpn_disconnected") VPN_DISCONNECTED("vpn_disconnected"),
+    @SerializedName("heartbeat") HEARTBEAT("heartbeat")
 }
 
 /**
@@ -32,7 +34,7 @@ enum class ClientEventType(val wireValue: String) {
 data class ClientEventRequest(
     val eventId: String,
     val installationId: String,
-    val eventType: String,
+    val eventType: ClientEventType,
     val occurredAt: String,
     val appVersion: String,
     val profileLabel: String? = null,
