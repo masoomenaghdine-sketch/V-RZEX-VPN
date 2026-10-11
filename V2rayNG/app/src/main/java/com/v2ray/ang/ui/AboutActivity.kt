@@ -25,7 +25,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.AppConfig
-import com.v2ray.ang.BuildConfig
 import com.v2ray.ang.R
 import com.v2ray.ang.core.CoreNativeManager
 import com.v2ray.ang.handler.MmkvManager
@@ -33,7 +32,6 @@ import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppTopBar
 import com.v2ray.ang.ui.compose.NavigationBarsSpacer
 import com.v2ray.ang.ui.compose.SettingsMenuItem
-import com.v2ray.ang.ui.compose.VersionInfoBlock
 import com.v2ray.ang.util.Utils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -59,9 +57,6 @@ fun AboutScreen(onBackClick: () -> Unit) {
     var publicIp by remember { mutableStateOf("در حال دریافت…") }
     var usageDuration by remember { mutableStateOf(formatVpnUsage()) }
 
-    val libVersion = CoreNativeManager.getLibVersion()
-    val versionText = "v" + BuildConfig.VERSION_NAME + " (" + libVersion + ")"
-    val appIdText = BuildConfig.APPLICATION_ID
     val deviceName = (Build.MANUFACTURER + " " + Build.MODEL).trim().ifBlank { "نامشخص" }
     val userId = MmkvManager.decodeSettingsString(AppConfig.PREF_USER_ID) ?: "در حال ساخت…"
 
@@ -106,10 +101,6 @@ fun AboutScreen(onBackClick: () -> Unit) {
                 icon = painterResource(R.drawable.ic_privacy_24dp),
                 title = stringResource(R.string.title_privacy_policy),
                 onClick = { Utils.openUri(context, AppConfig.APP_PRIVACY_POLICY) }
-            )
-            VersionInfoBlock(
-                versionText = versionText,
-                appIdText = appIdText
             )
             NavigationBarsSpacer()
         }
