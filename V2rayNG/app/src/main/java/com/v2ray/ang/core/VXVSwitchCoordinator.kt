@@ -92,7 +92,7 @@ class VXVSwitchCoordinator(
     suspend fun returnToMain(
         stopTimeoutMillis: Long = DEFAULT_STOP_TIMEOUT_MS,
     ): State = mutex.withLock {
-        if (state.phase != Phase.VXV_ACTIVE && state.phase != Phase.FAILED) return@withLock state
+        if (state.activeEnvironment != ActiveEnvironment.VXV) return@withLock state
         val snapshot = state
         publish(snapshot.copy(phase = Phase.STOPPING_VXV, error = null))
 
