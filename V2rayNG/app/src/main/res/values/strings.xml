@@ -2,7 +2,7 @@
 <resources>
     <string name="vxv_menu_title" translatable="false">VXV</string>
     <string name="vxv_screen_title">VXV · Psiphon mode</string>
-    <string name="vxv_engine_pending">VXV uses the bundled Psiphon engine. It connects independently of your saved main profile and restores that profile when you return.</string>
+    <string name="vxv_engine_pending">VXV starts its separate Psiphon tunnel and reports connected only after the local tunnel is ready.</string>
     <string name="vxv_switch_explanation">Android allows one full-device VPN tunnel at a time. VXV stops the main tunnel first and restores it only if it was running before.</string>
     <string name="vxv_return_main">Return to main app</string>
     <string name="vxv_stop_main_failed">The main VPN did not confirm that it stopped. VXV was not opened to avoid core conflicts.</string>
@@ -16,7 +16,7 @@
     <string name="vxv_permission_denied">VPN permission was not granted. Tap Start VXV to try again, or return to the main app.</string>
     <string name="vxv_start_failed">Psiphon did not connect. Check the app log and try again.</string>
     <string name="vxv_stop_failed">VXV has not confirmed that its tunnel stopped yet. Stay here and try returning again.</string>
-    <string name="app_name" translatable="false">PattNG</string>
+    <string name="app_name" translatable="false">VØRZEX VPN</string>
     <string name="app_widget_name">Switch</string>
     <string name="app_tile_name">Switch</string>
     <string name="app_tile_first_use">Add a profile in the app before using this feature.</string>
