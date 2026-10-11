@@ -180,6 +180,7 @@ jobs:
         java-version: '21'
 
     - name: Decode Keystore
+      if: ${{ github.event_name != 'pull_request' }}
       uses: timheuer/base64-to-file@v2.0.0
       id: android_keystore
       with:
@@ -195,14 +196,20 @@ jobs:
         # build before anything is assembled or signed.
         ./gradlew :app:testPlaystoreDebugUnitTest
         ./gradlew licenseFdroidReleaseReport
-        ./gradlew assembleRelease -PpattngVersion="${{ inputs.release_tag }}" -Pandroid.injected.signing.store.file=${{ steps.android_keystore.outputs.filePath }} -Pandroid.injected.signing.store.password=${{ secrets.APP_KEYSTORE_PASSWORD }} -Pandroid.injected.signing.key.alias=${{ secrets.APP_KEYSTORE_ALIAS }} -Pandroid.injected.signing.key.password=${{ secrets.APP_KEY_PASSWORD }}
+        if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+          # Pull requests build debug APKs without needing release-signing secrets.
+          ./gradlew assembleDebug
+        else
+          # Release builds must use the configured project signing key.
+          ./gradlew assembleRelease -PpattngVersion="${{ inputs.release_tag }}" -Pandroid.injected.signing.store.file=${{ steps.android_keystore.outputs.filePath }} -Pandroid.injected.signing.store.password=${{ secrets.APP_KEYSTORE_PASSWORD }} -Pandroid.injected.signing.key.alias=${{ secrets.APP_KEYSTORE_ALIAS }} -Pandroid.injected.signing.key.password=${{ secrets.APP_KEY_PASSWORD }}
+        fi
     
     - name: Check the native libraries in the APKs
       run: |
         # Looked into as ZIP files: every ABI the Aether core is built for has to carry the core, its
         # Psiphon client and its pluggable transport, and each APK's native files are listed for the record.
         status=0
-        for apk in ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/*/release/*.apk; do
+        for apk in ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/*/{debug,release}/*.apk; do
           entries=$(unzip -Z1 "$apk" | grep '^lib/' || true)
           echo "$(basename "$apk"):"
           echo "$entries" | sed 's/^/  /'
@@ -220,21 +227,21 @@ jobs:
 
     - name: Upload arm64-v8a APK
       uses: actions/upload-artifact@v7
-      if: ${{  success() }}
+      if: ${{ success() && github.event_name != 'pull_request' }}
       with:
         name: arm64-v8a
         path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/*/release/*arm64-v8a*.apk
 
     - name: Upload armeabi-v7a APK
       uses: actions/upload-artifact@v7
-      if: ${{  success() }}
+      if: ${{ success() && github.event_name != 'pull_request' }}
       with:
         name: armeabi-v7a
         path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/*/release/*armeabi-v7a*.apk
 
     - name: Upload x86 APK
       uses: actions/upload-artifact@v7
-      if: ${{  success() }}
+      if: ${{ success() && github.event_name != 'pull_request' }}
       with:
         name: x86-apk
         path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/*/release/*x86*.apk
@@ -245,6 +252,13 @@ jobs:
       with:
         name: universal-apk
         path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/*/release/*universal*.apk
+
+    - name: Upload pull-request debug APKs
+      uses: actions/upload-artifact@v7
+      if: ${{ success() && github.event_name == 'pull_request' }}
+      with:
+        name: vorzex-vpn-debug-apks
+        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/*/debug/*.apk
 
   sign-and-release:
     needs: build
