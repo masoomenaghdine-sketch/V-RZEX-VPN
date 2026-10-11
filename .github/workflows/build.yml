@@ -180,22 +180,34 @@ jobs:
         java-version: '21'
 
     - name: Decode Keystore
+      if: ${{ secrets.APP_KEYSTORE_BASE64 != '' && secrets.APP_KEYSTORE_PASSWORD != '' && secrets.APP_KEYSTORE_ALIAS != '' && secrets.APP_KEY_PASSWORD != '' }}
       uses: timheuer/base64-to-file@v2.0.0
       id: android_keystore
       with:
         fileName: "android_keystore.jks"
         encodedString: ${{ secrets.APP_KEYSTORE_BASE64 }}
 
-    - name: Build APK
+    - name: Run tests and license report
       run: |
         cd ${{ github.workspace }}/V2rayNG
         echo "sdk.dir=${ANDROID_HOME}" > local.properties
         chmod 755 gradlew
-        # The JVM unit tests are the only automated check of the Kotlin logic; a failure stops the
-        # build before anything is assembled or signed.
+        # Run the same unit tests and license report whether or not signing secrets are configured.
         ./gradlew :app:testPlaystoreDebugUnitTest
         ./gradlew licenseFdroidReleaseReport
+
+    - name: Build signed release APK
+      if: ${{ secrets.APP_KEYSTORE_BASE64 != '' && secrets.APP_KEYSTORE_PASSWORD != '' && secrets.APP_KEYSTORE_ALIAS != '' && secrets.APP_KEY_PASSWORD != '' }}
+      run: |
+        cd ${{ github.workspace }}/V2rayNG
         ./gradlew assembleRelease -PpattngVersion="${{ inputs.release_tag }}" -Pandroid.injected.signing.store.file=${{ steps.android_keystore.outputs.filePath }} -Pandroid.injected.signing.store.password=${{ secrets.APP_KEYSTORE_PASSWORD }} -Pandroid.injected.signing.key.alias=${{ secrets.APP_KEYSTORE_ALIAS }} -Pandroid.injected.signing.key.password=${{ secrets.APP_KEY_PASSWORD }}
+
+    - name: Build unsigned release APK (CI without signing secrets)
+      if: ${{ secrets.APP_KEYSTORE_BASE64 == '' || secrets.APP_KEYSTORE_PASSWORD == '' || secrets.APP_KEYSTORE_ALIAS == '' || secrets.APP_KEY_PASSWORD == '' }}
+      run: |
+        cd ${{ github.workspace }}/V2rayNG
+        echo "::notice::Signing secrets are not configured; building unsigned release APK for CI validation."
+        ./gradlew assembleRelease -PpattngVersion="${{ inputs.release_tag }}"
     
     - name: Check the native libraries in the APKs
       run: |
