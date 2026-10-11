@@ -1,6 +1,5 @@
 package com.v2ray.ang
 
-import android.app.Application
 import android.content.Context
 import androidx.core.content.ContextCompat
 import androidx.work.Configuration
@@ -11,6 +10,7 @@ import com.v2ray.ang.handler.AppLocaleManager
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.ui.compose.ThemeManager
+import android.app.Application
 
 class AngApplication : Application() {
     companion object {

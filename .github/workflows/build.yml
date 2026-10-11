@@ -9,6 +9,9 @@ on:
   push:
     branches:
       - master
+  pull_request:
+    branches:
+      - my-releases
 
 permissions:
   contents: write
@@ -95,7 +98,7 @@ jobs:
         key: libaether-${{ runner.os }}-${{ env.NDK_HOME }}-${{ env.RUST_TOOLCHAIN }}-${{ hashFiles('.git/modules/aether/HEAD') }}-${{ hashFiles('compile-aether.sh') }}
 
     - name: Install Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v6
       with:
         go-version: ${{ env.GO_VERSION }}
         # The client is built from a checkout of its own; there is no go.sum here to cache by.
@@ -150,8 +153,7 @@ jobs:
         cp -r ${{ github.workspace }}/libs-psiphon/. ${{ github.workspace }}/V2rayNG/app/libs/
         cp -r ${{ github.workspace }}/libs-pt/. ${{ github.workspace }}/V2rayNG/app/libs/
 
-    # Psiphon's client starts with the newest server list the build could fetch, so a fresh install has
-    # servers before it can reach the list on its own; see fetch-psiphon-servers.sh.
+    # The Aether Psiphon client uses this signed server list on a fresh install, before it can fetch updates itself.
     - name: Fetch the Psiphon server list
       run: |
         bash fetch-psiphon-servers.sh

@@ -105,7 +105,11 @@ class ServerAetherActivity : BaseServerActivity() {
     @Composable
     override fun EditorContent() {
         val uiState = rememberSaveable(saver = ServerUiState.Saver) {
-            ServerUiState.from(initialConfig = initialConfig)
+            ServerUiState.from(initialConfig = initialConfig).apply {
+                if (intent.getBooleanExtra("torNetworkMode", false)) {
+                    aetherTor = AetherTor.ONLY.type
+                }
+            }
         }.apply {
             configType = serverConfigType
         }
