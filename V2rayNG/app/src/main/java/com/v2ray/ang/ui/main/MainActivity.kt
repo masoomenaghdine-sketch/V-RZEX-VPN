@@ -51,6 +51,8 @@ import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.Utils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 
 class MainActivity : HelperBaseComponentActivity() {
@@ -155,6 +157,17 @@ class MainActivity : HelperBaseComponentActivity() {
         }
     }
 
+    private fun launchVXV(intent: Intent, wasXrayRunning: Boolean) {
+        try {
+            vxvLauncher.launch(intent)
+        } catch (error: Exception) {
+            getSharedPreferences(VXV_SWITCH_PREFS, MODE_PRIVATE).edit().clear().apply()
+            if (wasXrayRunning) requestServiceStart()
+            LogUtil.e(AppConfig.TAG, "Unable to launch embedded VXV client", error)
+            toast(R.string.vxv_launch_failed)
+        }
+    }
+
     private fun restoreXrayAfterVXV() {
         val prefs = getSharedPreferences(VXV_SWITCH_PREFS, MODE_PRIVATE)
         if (!prefs.getBoolean(KEY_VXV_HANDOFF_ACTIVE, false)) return
@@ -179,16 +192,24 @@ class MainActivity : HelperBaseComponentActivity() {
                 .putBoolean(KEY_RESTORE_XRAY, wasXrayRunning)
                 .apply()
 
-            // Stop only our own Xray service; profiles and settings remain untouched.
-            if (wasXrayRunning) LauncherManager.stopService(this)
-
-            try {
-                vxvLauncher.launch(launchIntent)
-            } catch (error: Exception) {
-                prefs.edit().clear().apply()
-                if (wasXrayRunning) requestServiceStart()
-                LogUtil.e(AppConfig.TAG, "Unable to launch VXV client", error)
-                toast(R.string.vxv_launch_failed)
+            // Stop only our own Xray service; wait for its actual stopped state before VXV
+            // can request Android's single VPN slot.
+            if (wasXrayRunning) {
+                LauncherManager.stopService(this)
+                lifecycleScope.launch {
+                    val stopped = withTimeoutOrNull(5_000) {
+                        mainViewModel.uiState.first { !it.isRunning }
+                        true
+                    } ?: false
+                    if (!stopped) {
+                        prefs.edit().clear().apply()
+                        toast(R.string.vxv_stop_timeout)
+                        return@launch
+                    }
+                    launchVXV(launchIntent, wasXrayRunning)
+                }
+            } else {
+                launchVXV(launchIntent, wasXrayRunning)
             }
             return
         }
