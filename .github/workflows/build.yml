@@ -209,8 +209,15 @@ jobs:
         APP_KEYSTORE_PASSWORD: ${{ secrets.APP_KEYSTORE_PASSWORD }}
         APP_KEYSTORE_ALIAS: ${{ secrets.APP_KEYSTORE_ALIAS }}
       run: |
-        keytool -list -keystore "${{ steps.android_keystore.outputs.filePath }}" -storepass "$APP_KEYSTORE_PASSWORD" -alias "$APP_KEYSTORE_ALIAS" >/dev/null
-        echo "Android signing keystore and alias verified."
+        set +e
+        keytool -list -keystore "${{ steps.android_keystore.outputs.filePath }}" -storepass "$APP_KEYSTORE_PASSWORD" -alias "$APP_KEYSTORE_ALIAS"
+        result=$?
+        if [ "$result" -eq 0 ]; then
+          echo "Android signing keystore and alias verified."
+        else
+          echo "::error::Keystore check failed (exit $result). The secret file may be truncated/invalid, the store password may not match, or the alias may be wrong. No secret values were printed."
+        fi
+        exit "$result"
 
     - name: Run tests and license report
       run: |
