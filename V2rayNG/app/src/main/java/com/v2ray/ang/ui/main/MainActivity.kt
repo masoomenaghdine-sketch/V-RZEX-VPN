@@ -137,8 +137,9 @@ class MainActivity : HelperBaseComponentActivity() {
     private fun openVXV() {
         val state = mainViewModel.uiState.value
         val wasRunning = state.isRunning
+        val shouldRestartMain = !state.selectedGuid.isNullOrBlank()
         val intent = Intent(this, VXVActivity::class.java).apply {
-            putExtra(VXVActivity.EXTRA_RESTORE_MAIN, wasRunning)
+            putExtra(VXVActivity.EXTRA_RESTORE_MAIN, shouldRestartMain)
             putExtra(VXVActivity.EXTRA_MAIN_GUID, state.selectedGuid)
         }
         if (!wasRunning) {
