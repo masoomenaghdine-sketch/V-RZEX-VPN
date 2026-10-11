@@ -63,6 +63,7 @@
 
         <activity
             android:name=".ui.main.MainActivity"
+            android:theme="@style/VorzexLaunchTheme"
             android:exported="true"
             android:launchMode="singleTask">
             <intent-filter>
