@@ -1,60 +1,60 @@
 # VXV Dual-Engine Switching Architecture
 
-Status: design contract for the isolated `feature/vxv-isolated-switch` branch. This document does not claim that the Psiphon engine is integrated or device-tested.
+Status: implementation contract for `feature/vxv-isolated-switch`. The Psiphon engine is not yet device-verified.
 
-## Product behavior
+## Confirmed product contract
 
-VXV is a separate in-app VPN environment powered by Psiphon. The main environment remains powered by the existing Xray/v2fly/Aether stack. A central switch coordinator owns transitions between them and remembers whether the main tunnel was active before entering VXV.
+The design combines independent VPN environments with persistent, compatible shared helpers:
 
-### Main → VXV
+1. In Xray mode, Xray owns the active Android VPN interface and runs the components required by the selected main profile.
+2. In VXV mode, Psiphon owns the active Android VPN interface and runs the components required by VXV.
+3. Shared, engine-agnostic capabilities (UI, profile/preferences storage, logging, connectivity observation) remain available when safe.
+4. Helpers that retain tunnel-specific sockets, routes, descriptors, or native state are stopped unless the selected engine explicitly consumes them.
+5. The coordinator serializes switches, confirms stop before starting the other engine, and restores the previous main profile only if it was running before VXV was opened.
 
-1. Snapshot the selected main profile ID and whether the main tunnel was genuinely running.
-2. Request a stop of the main VPN service and wait for authoritative service state to confirm the VPN interface is released.
-3. Start the VXV Psiphon session only after that confirmation. If stop times out, do not start VXV; show an error and remain in the main environment.
-4. Keep only helper processes that have an explicit, verified compatibility contract with the active Psiphon mode. Do not keep the Xray core running merely to make it appear alive.
+This is independent environments plus compatible shared capabilities and exactly one active system-TUN owner. It does not mean both full-device VPN tunnels route traffic concurrently.
 
-### VXV → Main
+## Main to VXV
 
-1. Stop Psiphon and await confirmation that it has released its VPN interface and native resources.
+1. Snapshot the selected main profile ID and whether the main tunnel was running.
+2. Request main-service stop and wait for authoritative service state to confirm it stopped.
+3. Start Psiphon only after the main VPN interface is released. If stop times out, abort the transition.
+4. Never label VXV connected until the Psiphon engine reports a real connected state.
+
+## VXV to Main
+
+1. Stop Psiphon and await confirmation that its VPN interface and native resources are released.
 2. Return to the main screen.
-3. Restore the exact main profile only if the main VPN was running before the transition. If it was already stopped, leave it stopped.
-4. Never report connected until the active engine reports a real connected state.
+3. Restore the exact previous profile only if the main tunnel was running before VXV.
+4. If Psiphon stop cannot be confirmed, do not start Xray over it; surface a recoverable error.
 
-## Tunnel ownership constraint
+## Engine and helper ownership
 
-Android's `VpnService.Builder.establish()` creates the app's VPN interface. The existing `CoreVpnService` owns a TUN descriptor and feeds it to the existing core/tun2socks pipeline. The upstream Psiphon Android app's full-VPN mode also owns a VPN interface. Starting both full-VPN implementations concurrently is not a valid design.
+- Engine-exclusive: Xray core, Psiphon tunnel/session, and engine-specific adapters.
+- Tunnel owner: exactly one service owns the Android VPN interface at a time.
+- Shared helpers: UI, preferences, profile storage, logging, connectivity observation.
+- Conditional helpers: proxy listeners, tun2socks, Aether, process finders, and native workers run only when the active engine consumes them.
+- No fake state: selected profile is not evidence of a live tunnel; a running native process is not evidence that device traffic is routed.
 
-The preferred coexistence design is one active system-TUN owner at a time. A Psiphon proxy-only mode may be used as an upstream for a compatible tunnel adapter only after the exact SDK artifact's API, SOCKS listener, socket protection, DNS handling, IPv4/IPv6 routing, and failure semantics are verified. Until then, proxy-only mode must not be described as a full-device VPN.
+## Failure and lifecycle requirements
 
-## Capability policy
+- Stop timeout: abort transition and do not start the other full-VPN engine.
+- Psiphon startup failure: report failure and clean up any partially created resources.
+- Rapid repeated requests: allow only one switch operation at a time.
+- Process death or VPN permission revocation: reconstruct state from service-owned truth and release resources.
+- Restore only the captured profile and only if the main tunnel was previously active.
 
-Each component must declare a capability/ownership contract instead of being toggled by a broad "engine on/off" flag:
+## Required validation
 
-- **Engine-exclusive:** Xray core, Psiphon tunnel/session, each engine's tunnel adapter.
-- **Tunnel owner:** exactly one component owns the Android VPN interface at a time.
-- **Shared helpers:** logging, preferences, profile storage, UI, connectivity observation, and other demonstrably engine-agnostic components may remain alive if they do not retain sockets/routes/resources tied to the previous tunnel.
-- **Conditional helpers:** proxy listeners, tun2socks, Aether, process finders, and native workers remain active only when the selected engine explicitly consumes them.
-- **No fake state:** a selected profile is not evidence that its engine is running; a running native process is not evidence that traffic is routed through it.
-
-## Failure handling
-
-- Stop timeout: abort transition; do not start the other full-VPN engine.
-- Psiphon startup failure: report failure and leave no stale VXV "connected" state. Offer a controlled return to the main screen.
-- Main restoration: restore only the captured profile and only if the main tunnel was running before entering VXV.
-- Process death/restart: reconstruct state from service-owned truth, not a UI-process Boolean.
-- Always clean up native workers, descriptors, listeners, notifications, and callbacks owned by the engine being left.
-
-## Required tests before calling this complete
-
-1. Main stopped → enter VXV → return: main remains stopped.
-2. Main running → enter VXV: main tunnel is confirmed stopped before Psiphon starts.
-3. Main running → VXV connection succeeds → return: Psiphon is confirmed stopped before the original main profile restarts.
-4. Main running → main stop times out: VXV does not start.
-5. Psiphon start fails: no connected UI state and no orphaned service/resources.
-6. Rapid repeated switch taps: only one transition and one active tunnel owner.
-7. Process death / Android VPN permission revocation: resources are released and state recovers safely.
-8. Build every supported ABI and verify the exact Psiphon SDK API in the artifact declared by Gradle.
+1. Main stopped -> VXV -> return leaves main stopped.
+2. Main running -> VXV starts only after confirmed main stop.
+3. VXV running -> main starts only after confirmed Psiphon stop.
+4. Main stop timeout prevents VXV startup.
+5. Psiphon start failure never shows connected and leaves no orphaned service.
+6. Rapid switch taps produce one transition and one tunnel owner.
+7. Process death and VPN permission revocation recover safely.
+8. Build supported variants/ABIs and test on a real Android device.
 
 ## Current implementation boundary
 
-The current branch includes the VXV entry point and main-service handover guard, plus a Psiphon SDK dependency declaration. The VXV screen is still a placeholder: it does not yet start or manage a real Psiphon session. This document defines the target behavior and prevents the placeholder from being mistaken for a working VPN.
+The branch currently has the VXV entry point and guarded main-service handover, plus the Psiphon tunnel-core AAR dependency declaration. The screen still does not create a Psiphon session: a library dependency by itself is not a running VPN. Before claiming completion, the app needs a compatible Psiphon host/service integration, valid Psiphon configuration and embedded server entries, correct foreground-service/notification lifecycle, stop confirmation, and device-level traffic tests.
