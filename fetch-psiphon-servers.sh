@@ -17,6 +17,7 @@ APP_CONFIG="$__dir/V2rayNG/app/src/main/java/com/v2ray/ang/AppConfig.kt"
 KEY_SOURCE="$__dir/aether/aether/src/psiphon.rs"
 TARGET="$__dir/V2rayNG/app/src/main/assets/psiphon_servers.dat"
 STAMP="$__dir/V2rayNG/app/src/main/assets/psiphon_servers.stamp"
+EMBEDDED_LIST_TARGET="$__dir/V2rayNG/third_party/shirokhorshid/app/psiphon_servers.txt"
 
 # The first python that runs: on Windows, "python3" may be a store stub that only prints a hint.
 PY=""
@@ -86,7 +87,9 @@ EOF
 openssl dgst -sha256 -verify "$work/key.pem" -signature "$work/sig.bin" "$work/data.bin"
 
 mkdir -p "$(dirname "$TARGET")"
+mkdir -p "$(dirname "$EMBEDDED_LIST_TARGET")"
+cp "$work/data.bin" "$EMBEDDED_LIST_TARGET"
 cp "$work/list" "$TARGET"
 cp "$work/stamp" "$STAMP"
 echo "[psiphon-servers] staged:"
-ls -la "$TARGET" "$STAMP"
+ls -la "$TARGET" "$STAMP" "$EMBEDDED_LIST_TARGET"
