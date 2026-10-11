@@ -60,6 +60,9 @@ class VXVSwitchCoordinator(
         if (state.phase != Phase.IDLE && state.phase != Phase.FAILED) return@withLock state
         val wasRunning = engines.mainIsRunning()
         val profileGuid = engines.selectedMainProfileGuid()
+        if (wasRunning && profileGuid.isNullOrBlank()) {
+            return@withLock fail("Main VPN is running but its selected profile cannot be restored")
+        }
         publish(
             State(
                 phase = if (wasRunning) Phase.STOPPING_MAIN else Phase.STARTING_VXV,
