@@ -54,7 +54,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class MainActivity : HelperBaseComponentActivity() {
-
     private val mainViewModel: MainViewModel by viewModels {
         MainViewModel.Factory(application, MainRepository(application as AngApplication))
     }
@@ -144,12 +143,22 @@ class MainActivity : HelperBaseComponentActivity() {
     }
 
     private fun navigateTo(destination: MainDestination) {
+        if (destination == MainDestination.TorNetwork) {
+            // Open a Tor-only starter profile in the existing Aether editor. The existing
+            // Tor/lyrebird engine is reused; existing VPN profiles and settings remain intact.
+            startActivity(
+                Intent(this, ServerAetherActivity::class.java)
+                    .putExtra(ServerAetherActivity.EXTRA_TOR_QUICK_SETUP, true)
+            )
+            return
+        }
         val intent = when (destination) {
             MainDestination.Subscriptions -> Intent(this, SubSettingActivity::class.java)
             MainDestination.PerAppProxy -> Intent(this, PerAppProxyActivity::class.java)
             MainDestination.Routing -> Intent(this, RoutingSettingActivity::class.java)
             MainDestination.UserAssets -> Intent(this, UserAssetActivity::class.java)
             MainDestination.Settings -> Intent(this, SettingsActivity::class.java)
+            MainDestination.TorNetwork -> error("VXV is handled before building the settings intent")
             MainDestination.Logcat -> Intent(this, LogcatActivity::class.java)
             MainDestination.CheckUpdate -> Intent(this, CheckUpdateActivity::class.java)
             MainDestination.BackupRestore -> Intent(this, BackupActivity::class.java)
