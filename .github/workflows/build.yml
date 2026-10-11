@@ -179,8 +179,22 @@ jobs:
         distribution: 'temurin'
         java-version: '21'
 
+    - name: Check release signing configuration
+      id: signing_check
+      env:
+        APP_KEYSTORE_BASE64: ${{ secrets.APP_KEYSTORE_BASE64 }}
+        APP_KEYSTORE_PASSWORD: ${{ secrets.APP_KEYSTORE_PASSWORD }}
+        APP_KEYSTORE_ALIAS: ${{ secrets.APP_KEYSTORE_ALIAS }}
+        APP_KEY_PASSWORD: ${{ secrets.APP_KEY_PASSWORD }}
+      run: |
+        if [ -n "$APP_KEYSTORE_BASE64" ] && [ -n "$APP_KEYSTORE_PASSWORD" ] && [ -n "$APP_KEYSTORE_ALIAS" ] && [ -n "$APP_KEY_PASSWORD" ]; then
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "configured=false" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Decode Keystore
-      if: ${{ secrets.APP_KEYSTORE_BASE64 != '' && secrets.APP_KEYSTORE_PASSWORD != '' && secrets.APP_KEYSTORE_ALIAS != '' && secrets.APP_KEY_PASSWORD != '' }}
+      if: ${{ steps.signing_check.outputs.configured == 'true' }}
       uses: timheuer/base64-to-file@v2.0.0
       id: android_keystore
       with:
@@ -197,13 +211,13 @@ jobs:
         ./gradlew licenseFdroidReleaseReport
 
     - name: Build signed release APK
-      if: ${{ secrets.APP_KEYSTORE_BASE64 != '' && secrets.APP_KEYSTORE_PASSWORD != '' && secrets.APP_KEYSTORE_ALIAS != '' && secrets.APP_KEY_PASSWORD != '' }}
+      if: ${{ steps.signing_check.outputs.configured == 'true' }}
       run: |
         cd ${{ github.workspace }}/V2rayNG
         ./gradlew assembleRelease -PpattngVersion="${{ inputs.release_tag }}" -Pandroid.injected.signing.store.file=${{ steps.android_keystore.outputs.filePath }} -Pandroid.injected.signing.store.password=${{ secrets.APP_KEYSTORE_PASSWORD }} -Pandroid.injected.signing.key.alias=${{ secrets.APP_KEYSTORE_ALIAS }} -Pandroid.injected.signing.key.password=${{ secrets.APP_KEY_PASSWORD }}
 
     - name: Build unsigned release APK (CI without signing secrets)
-      if: ${{ secrets.APP_KEYSTORE_BASE64 == '' || secrets.APP_KEYSTORE_PASSWORD == '' || secrets.APP_KEYSTORE_ALIAS == '' || secrets.APP_KEY_PASSWORD == '' }}
+      if: ${{ steps.signing_check.outputs.configured != 'true' }}
       run: |
         cd ${{ github.workspace }}/V2rayNG
         echo "::notice::Signing secrets are not configured; building unsigned release APK for CI validation."
