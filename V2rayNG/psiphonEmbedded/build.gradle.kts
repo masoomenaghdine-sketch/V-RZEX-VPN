@@ -98,7 +98,7 @@ android {
     sourceSets {
         getByName("main") {
             java.srcDirs("../third_party/shirokhorshid/app/src/main/java", "src/main/java")
-            java.srcDir(generatedEmbeddedValues.map { it.asFile.parentFile.parentFile.parentFile.parentFile })
+            java.srcDir(generatedEmbeddedValues.get().asFile.parentFile.parentFile.parentFile.parentFile)
             res.srcDirs("../third_party/shirokhorshid/app/src/main/res")
             assets.srcDirs("../third_party/shirokhorshid/app/src/main/assets")
             jniLibs.srcDirs("../third_party/shirokhorshid/app/src/main/jniLibs")
