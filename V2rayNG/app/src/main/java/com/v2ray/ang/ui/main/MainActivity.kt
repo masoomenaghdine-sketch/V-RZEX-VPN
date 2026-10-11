@@ -169,7 +169,12 @@ class MainActivity : HelperBaseComponentActivity() {
                 mainViewModel.uiState.first { !it.isRunning }
             } != null
             if (stopped) {
-                startActivity(intent)
+                try {
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    openingVXV = false
+                    toastError(R.string.vxv_stop_main_failed)
+                }
             } else {
                 openingVXV = false
                 toastError(R.string.vxv_stop_main_failed)
