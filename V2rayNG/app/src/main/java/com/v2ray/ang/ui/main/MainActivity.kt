@@ -12,8 +12,10 @@ import androidx.compose.runtime.Composable
 import androidx.lifecycle.lifecycleScope
 import com.v2ray.ang.AngApplication
 import com.v2ray.ang.AppConfig
+import com.v2ray.ang.BuildConfig
 import com.v2ray.ang.R
 import com.v2ray.ang.core.LauncherManager
+import com.v2ray.ang.api.vorzex.VorzexApiClient
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.enums.EConfigType
 import com.v2ray.ang.enums.PermissionType
@@ -94,8 +96,22 @@ class MainActivity : HelperBaseComponentActivity() {
         setTheme(R.style.AppThemeDayNight_NoActionBar)
         super.onCreate(savedInstanceState)
         mainViewModel.onAction(MainAction.Initialize)
+        checkVorzexApiHealth()
 
         checkAndRequestPermission(PermissionType.POST_NOTIFICATIONS) {}
+    }
+
+    /** Checks only the backend health endpoint. No device ID, profile, or connection data is uploaded. */
+    private fun checkVorzexApiHealth() {
+        lifecycleScope.launch {
+            runCatching {
+                VorzexApiClient(BuildConfig.VORZEX_API_BASE_URL).checkHealth()
+            }.onSuccess {
+                LogUtil.i("VORZEX_API", "Backend health endpoint responded successfully")
+            }.onFailure { error ->
+                LogUtil.w("VORZEX_API", "Backend health check failed: ${error.message}")
+            }
+        }
     }
 
     override fun onStart() {
