@@ -8,6 +8,7 @@ import com.v2ray.ang.AppConfig
 import com.v2ray.ang.contracts.ServiceControl
 import com.v2ray.ang.core.CoreServiceManager
 import com.v2ray.ang.handler.AppLocaleManager
+import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.NotificationManager
 import com.v2ray.ang.util.LogUtil
 import java.lang.ref.SoftReference
@@ -45,6 +46,7 @@ class CoreProxyOnlyService : Service(), ServiceControl {
             return START_NOT_STICKY
         }
 
+        startVpnUsageTracking()
         return START_STICKY
     }
 
@@ -53,7 +55,24 @@ class CoreProxyOnlyService : Service(), ServiceControl {
      */
     override fun onDestroy() {
         super.onDestroy()
+        stopVpnUsageTracking()
         CoreServiceManager.stopCoreLoop()
+    }
+
+    private fun startVpnUsageTracking() {
+        val startedAt = MmkvManager.decodeSettingsLong(AppConfig.PREF_VPN_USAGE_STARTED_AT, 0L)
+        if (startedAt <= 0L) {
+            MmkvManager.encodeSettings(AppConfig.PREF_VPN_USAGE_STARTED_AT, System.currentTimeMillis())
+        }
+    }
+
+    private fun stopVpnUsageTracking() {
+        val startedAt = MmkvManager.decodeSettingsLong(AppConfig.PREF_VPN_USAGE_STARTED_AT, 0L)
+        if (startedAt <= 0L) return
+        val elapsed = (System.currentTimeMillis() - startedAt).coerceAtLeast(0L)
+        val total = MmkvManager.decodeSettingsLong(AppConfig.PREF_VPN_USAGE_TOTAL_MS, 0L)
+        MmkvManager.encodeSettings(AppConfig.PREF_VPN_USAGE_TOTAL_MS, total + elapsed)
+        MmkvManager.encodeSettings(AppConfig.PREF_VPN_USAGE_STARTED_AT, 0L)
     }
 
     /**

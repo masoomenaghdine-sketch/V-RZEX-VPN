@@ -8,6 +8,7 @@ import com.v2ray.ang.AppConfig
 import com.v2ray.ang.contracts.ServiceControl
 import com.v2ray.ang.core.CoreServiceManager
 import com.v2ray.ang.handler.AppLocaleManager
+import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.NotificationManager
 import com.v2ray.ang.root.RootProxyManager
 import com.v2ray.ang.util.LogUtil
@@ -61,6 +62,8 @@ class CoreRootService : Service(), ServiceControl {
             if (!RootProxyManager.start(this@CoreRootService)) {
                 LogUtil.e(AppConfig.TAG, "StartCore-Root: failed to start root mode, stopping")
                 stopService()
+            } else {
+                startVpnUsageTracking()
             }
         }
 
@@ -78,7 +81,24 @@ class CoreRootService : Service(), ServiceControl {
         // Remove routing rules BEFORE stopping the core so traffic is never redirected
         // to a dead listener. Synchronous on purpose — leaving rules behind breaks the net.
         RootProxyManager.stop(this)
+        stopVpnUsageTracking()
         CoreServiceManager.stopCoreLoop()
+    }
+
+    private fun startVpnUsageTracking() {
+        val startedAt = MmkvManager.decodeSettingsLong(AppConfig.PREF_VPN_USAGE_STARTED_AT, 0L)
+        if (startedAt <= 0L) {
+            MmkvManager.encodeSettings(AppConfig.PREF_VPN_USAGE_STARTED_AT, System.currentTimeMillis())
+        }
+    }
+
+    private fun stopVpnUsageTracking() {
+        val startedAt = MmkvManager.decodeSettingsLong(AppConfig.PREF_VPN_USAGE_STARTED_AT, 0L)
+        if (startedAt <= 0L) return
+        val elapsed = (System.currentTimeMillis() - startedAt).coerceAtLeast(0L)
+        val total = MmkvManager.decodeSettingsLong(AppConfig.PREF_VPN_USAGE_TOTAL_MS, 0L)
+        MmkvManager.encodeSettings(AppConfig.PREF_VPN_USAGE_TOTAL_MS, total + elapsed)
+        MmkvManager.encodeSettings(AppConfig.PREF_VPN_USAGE_STARTED_AT, 0L)
     }
 
     override fun getService(): Service = this
