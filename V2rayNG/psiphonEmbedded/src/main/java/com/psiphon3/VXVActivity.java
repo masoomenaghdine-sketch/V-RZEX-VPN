@@ -1,9 +1,6 @@
 package com.psiphon3;
 
-import android.os.Bundle;
 import android.widget.Toast;
-
-import androidx.annotation.Nullable;
 
 import com.psiphon3.psiphonlibrary.TunnelServiceInteractor;
 
