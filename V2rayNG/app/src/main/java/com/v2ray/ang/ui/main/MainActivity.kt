@@ -144,6 +144,18 @@ class MainActivity : HelperBaseComponentActivity() {
     }
 
     private fun navigateTo(destination: MainDestination) {
+        if (destination == MainDestination.VXV) {
+            // VXV opens the real Shir o Khorshid client when it is installed.
+            // This avoids presenting a fake "connected" state from the Xray service.
+            val shirOKhorshidPackage = "com.shirokhorshid.vpn"
+            val launchIntent = packageManager.getLaunchIntentForPackage(shirOKhorshidPackage)
+            if (launchIntent != null) {
+                startActivity(launchIntent)
+            } else {
+                Utils.openUri(this, "https://github.com/shirokhorshid/shirokhorshid-android")
+            }
+            return
+        }
         val intent = when (destination) {
             MainDestination.Subscriptions -> Intent(this, SubSettingActivity::class.java)
             MainDestination.PerAppProxy -> Intent(this, PerAppProxyActivity::class.java)
