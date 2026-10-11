@@ -42,9 +42,22 @@ val generateEmbeddedValues by tasks.registering {
 
         val serverList = providers.environmentVariable("PSIPHON_EMBEDDED_SERVER_LIST").orNull
             ?: providers.gradleProperty("PSIPHON_EMBEDDED_SERVER_LIST").orNull.orEmpty()
+        val serverListFilePath = providers.environmentVariable("PSIPHON_EMBEDDED_SERVER_LIST_FILE").orNull
+            ?: providers.gradleProperty("PSIPHON_EMBEDDED_SERVER_LIST_FILE").orNull.orEmpty()
+        val serverListFile = serverListFilePath.takeIf { it.isNotBlank() }?.let { File(it) }
+        val serverListEntries = if (serverListFile?.isFile == true) {
+            serverListFile.readLines()
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .joinToString(", ") { "\"\${javaEscape(it)}\"" }
+        } else if (serverList.isBlank()) {
+            ""
+        } else {
+            "\"\${javaEscape(serverList)}\""
+        }
         val values = mapOf(
             "clientVersion" to (providers.environmentVariable("PSIPHON_CLIENT_VERSION").orNull ?: "1"),
-            "serverListEntries" to if (serverList.isBlank()) "" else "\"${javaEscape(serverList)}\"",
+            "serverListEntries" to serverListEntries,
             "feedbackKey" to (providers.environmentVariable("PSIPHON_FEEDBACK_ENCRYPTION_PUBLIC_KEY").orNull ?: ""),
             "feedbackUrls" to (providers.environmentVariable("PSIPHON_FEEDBACK_UPLOAD_URLS_JSON").orNull ?: "[]"),
             "propagationChannelId" to channelId,
