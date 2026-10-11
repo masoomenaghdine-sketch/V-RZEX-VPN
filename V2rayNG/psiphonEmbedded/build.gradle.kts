@@ -76,6 +76,7 @@ val generateEmbeddedValues by tasks.registering {
 android {
     namespace = "com.psiphon3"
     compileSdk = 37
+    ndkVersion = "30.0.16248370"
 
     defaultConfig {
         minSdk = 29
