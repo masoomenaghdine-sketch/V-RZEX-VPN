@@ -24,7 +24,7 @@ import com.v2ray.ang.ui.base.BaseComponentActivity
 
 /**
  * Isolated VXV entry point. The main VPN service is stopped by MainActivity before this screen
- * opens; if it had been running, returning restores the same selected profile.
+ * opens; returning starts the same selected main profile when one was selected.
  *
  * The standalone Shir o Khorshid/Psiphon engine is intentionally not represented as connected
  * until it is actually integrated and can report a real connection state.
