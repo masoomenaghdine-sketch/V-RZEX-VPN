@@ -84,7 +84,6 @@ android {
 
     defaultConfig {
         minSdk = 29
-        consumerProguardFiles("consumer-rules.pro")
     }
 
     sourceSets {
@@ -121,7 +120,7 @@ tasks.named("preBuild").configure {
     dependsOn(generateEmbeddedValues)
 }
 
-android.sourceSets.getByName("main").java.srcDir(generatedEmbeddedValues.map { it.asFile.parentFile.parentFile.parentFile.parentFile.parentFile })
+android.sourceSets.getByName("main").java.srcDir(generatedEmbeddedValues.map { it.asFile.parentFile.parentFile.parentFile.parentFile })
 
 dependencies {
     implementation(project(":psiphonTray"))
