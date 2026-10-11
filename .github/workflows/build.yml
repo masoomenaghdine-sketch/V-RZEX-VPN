@@ -12,6 +12,7 @@ on:
   pull_request:
     branches:
       - my-releases
+      - feature/vxv-tor-slipnet-replacement
 
 permissions:
   contents: write
