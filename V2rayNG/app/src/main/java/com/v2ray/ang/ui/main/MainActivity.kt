@@ -57,6 +57,9 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 class MainActivity : HelperBaseComponentActivity() {
 
+    @Volatile
+    private var openingVXV = false
+
     private val mainViewModel: MainViewModel by viewModels {
         MainViewModel.Factory(application, MainRepository(application as AngApplication))
     }
@@ -102,6 +105,8 @@ class MainActivity : HelperBaseComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        // A return from VXV allows a fresh switch request.
+        openingVXV = false
         // The service can have gone away while the screen was not shown, without a word if its process died.
         mainViewModel.onAction(MainAction.RefreshServiceState)
     }
@@ -135,6 +140,10 @@ class MainActivity : HelperBaseComponentActivity() {
 
     /** Open VXV only after the main service has confirmed that it stopped. */
     private fun openVXV() {
+        // Compose can deliver repeated taps while a service stop is still in flight.
+        // Only one handover attempt may be pending at a time.
+        if (openingVXV) return
+        openingVXV = true
         val state = mainViewModel.uiState.value
         val wasRunning = state.isRunning
         // Restore only if the main service was actually running before entering VXV.
@@ -145,7 +154,12 @@ class MainActivity : HelperBaseComponentActivity() {
             putExtra(VXVActivity.EXTRA_MAIN_GUID, state.selectedGuid)
         }
         if (!wasRunning) {
-            startActivity(intent)
+            try {
+                startActivity(intent)
+            } catch (e: Exception) {
+                openingVXV = false
+                toastError(R.string.vxv_stop_main_failed)
+            }
             return
         }
 
@@ -157,6 +171,7 @@ class MainActivity : HelperBaseComponentActivity() {
             if (stopped) {
                 startActivity(intent)
             } else {
+                openingVXV = false
                 toastError(R.string.vxv_stop_main_failed)
             }
         }
