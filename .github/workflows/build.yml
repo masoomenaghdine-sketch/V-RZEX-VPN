@@ -248,6 +248,25 @@ jobs:
         cd ${{ github.workspace }}/V2rayNG
         echo "Signing secrets are missing or the keystore could not be verified; building unsigned release APK for CI validation."
         ./gradlew assembleRelease -PpattngVersion="${{ inputs.release_tag }}"
+
+    - name: Sign fallback APKs with temporary CI key
+      if: ${{ steps.signing_check.outputs.configured != 'true' || steps.keystore_verify.outcome == 'failure' }}
+      run: |
+        set -euo pipefail
+        APK_DIR="${{ github.workspace }}/V2rayNG/app/build/outputs/apk"
+        KEYSTORE_PATH="$RUNNER_TEMP/ci-signing-key.jks"
+        SIGNING_PASSWORD="$(openssl rand -hex 24)"
+        keytool -genkeypair -noprompt -keystore "$KEYSTORE_PATH" \
+          -storepass "$SIGNING_PASSWORD" -keypass "$SIGNING_PASSWORD" \
+          -alias ci-temporary -keyalg RSA -keysize 2048 -validity 3650 \
+          -dname "CN=VORZEX CI Temporary,O=VORZEX,C=US"
+        find "$APK_DIR" -path '*/release/*.apk' -type f -print0 | while IFS= read -r -d '' apk; do
+          "$ANDROID_HOME/build-tools/37.0.0/apksigner" sign \
+            --ks "$KEYSTORE_PATH" --ks-key-alias ci-temporary \
+            --ks-pass "pass:$SIGNING_PASSWORD" --key-pass "pass:$SIGNING_PASSWORD" "$apk"
+          "$ANDROID_HOME/build-tools/37.0.0/apksigner" verify "$apk"
+          echo "Signed and verified fallback APK: $(basename "$apk")"
+        done
     
     - name: Check the native libraries in the APKs
       run: |
