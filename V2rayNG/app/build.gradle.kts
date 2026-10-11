@@ -163,6 +163,10 @@ android {
 }
 
 dependencies {
+    // Independent Psiphon tunnel-core SDK for VXV. The VXV service/UI integration must
+    // use this SDK without replacing the existing Xray/v2fly/Aether core implementation.
+    implementation("ca.psiphon:psiphontunnel:2.0.41")
+
     // Core Libraries
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar", "*.jar"))))
 
