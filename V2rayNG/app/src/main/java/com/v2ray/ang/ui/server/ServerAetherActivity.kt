@@ -110,7 +110,7 @@ class ServerAetherActivity : BaseServerActivity() {
         val uiState = rememberSaveable(saver = ServerUiState.Saver) {
             ServerUiState.from(initialConfig = initialConfig).apply {
                 if (intent.getBooleanExtra(EXTRA_TOR_QUICK_SETUP, false) && editGuid.isBlank()) {
-                    remarks = getString(R.string.vxv_tor_profile_name)
+                    remarks = getString(R.string.tor_profile_name)
                     aetherTor = AetherTor.ONLY.type
                     aetherTorBridges = AetherTorBridges.AUTO.type
                     aetherTorRelays = AetherTorRelays.AUTO.type
