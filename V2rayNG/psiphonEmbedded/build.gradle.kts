@@ -61,12 +61,7 @@ val generateEmbeddedValues by tasks.registering {
             "getNewVersionEmail" to (providers.environmentVariable("PSIPHON_GET_NEW_VERSION_EMAIL").orNull ?: "get@psiphon3.com"),
             "dataCollectionUrl" to (providers.environmentVariable("PSIPHON_DATA_COLLECTION_INFO_URL").orNull ?: "https://psiphon.ca/privacy.html")
         )
-        values.forEach { (key, value) ->
-            if (key in setOf("feedbackUrls", "remoteListUrls", "obfuscatedUrls")) {
-                template = template.replace("${'$'}{escapeJava($key)", "${'$'}{escapeJava($key)")
-            }
-            replaceToken(key, value)
-        }
+        values.forEach { (key, value) -> replaceToken(key, value) }
         template = template
             .replace("${'$'}{escapeJava(feedbackUrls)}", javaEscape(values.getValue("feedbackUrls")))
             .replace("${'$'}{escapeJava(remoteListUrls)}", javaEscape(values.getValue("remoteListUrls")))
