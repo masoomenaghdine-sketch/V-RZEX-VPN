@@ -201,6 +201,15 @@ jobs:
         fileName: "android_keystore.jks"
         encodedString: ${{ secrets.APP_KEYSTORE_BASE64 }}
 
+    - name: Verify Android keystore
+      if: ${{ steps.signing_check.outputs.configured == 'true' }}
+      env:
+        APP_KEYSTORE_PASSWORD: ${{ secrets.APP_KEYSTORE_PASSWORD }}
+        APP_KEYSTORE_ALIAS: ${{ secrets.APP_KEYSTORE_ALIAS }}
+      run: |
+        keytool -list -keystore "${{ steps.android_keystore.outputs.filePath }}" -storepass "$APP_KEYSTORE_PASSWORD" -alias "$APP_KEYSTORE_ALIAS" >/dev/null
+        echo "Android signing keystore and alias verified."
+
     - name: Run tests and license report
       run: |
         cd ${{ github.workspace }}/V2rayNG
