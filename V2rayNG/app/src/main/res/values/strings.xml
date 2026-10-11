@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="vxv_menu_title" translatable="false">VXV</string>
+    <string name="vxv_screen_title">VXV independent mode</string>
+    <string name="vxv_engine_pending">The isolated VXV screen is ready, but its standalone Shir o Khorshid/Psiphon connection engine has not yet been integrated in this branch. This screen does not claim an active VPN connection.</string>
+    <string name="vxv_switch_explanation">If the main VPN was running when you entered VXV, it was stopped first. Returning to the main app restores the previously selected profile and starts it again.</string>
+    <string name="vxv_return_main">Return to main app</string>
+    <string name="vxv_stop_main_failed">The main VPN did not confirm that it stopped. VXV was not opened to avoid core conflicts.</string>
     <string name="app_name" translatable="false">PattNG</string>
     <string name="app_widget_name">Switch</string>
     <string name="app_tile_name">Switch</string>
