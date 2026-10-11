@@ -32,7 +32,7 @@ class VorzexApiClient(
 
     /** Lightweight connectivity probe; sends no installation or VPN profile data. */
     suspend fun checkHealth(): Unit = get(
-        path = "health",
+        path = "healthz",
         responseType = Unit::class.java,
         requiresToken = false
     )
