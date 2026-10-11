@@ -51,17 +51,9 @@ import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.Utils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 
 class MainActivity : HelperBaseComponentActivity() {
-    companion object {
-        private const val VXV_SWITCH_PREFS = "vxv_switch_state"
-        private const val KEY_VXV_HANDOFF_ACTIVE = "handoff_active"
-        private const val KEY_RESTORE_XRAY = "restore_xray"
-    }
-
     private val mainViewModel: MainViewModel by viewModels {
         MainViewModel.Factory(application, MainRepository(application as AngApplication))
     }
@@ -69,13 +61,6 @@ class MainActivity : HelperBaseComponentActivity() {
     private val requestVpnPermission =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             if (it.resultCode == RESULT_OK) startV2Ray()
-        }
-
-    // Activity-result callback is safer than restoring Xray on every onResume:
-    // VXV may merely be in the background and still own Android's VPN slot.
-    private val vxvLauncher =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            restoreXrayAfterVXV()
         }
 
     private val profileEditorLauncher =
@@ -157,60 +142,14 @@ class MainActivity : HelperBaseComponentActivity() {
         }
     }
 
-    private fun launchVXV(intent: Intent, wasXrayRunning: Boolean) {
-        try {
-            vxvLauncher.launch(intent)
-        } catch (error: Exception) {
-            getSharedPreferences(VXV_SWITCH_PREFS, MODE_PRIVATE).edit().clear().apply()
-            if (wasXrayRunning) requestServiceStart()
-            LogUtil.e(AppConfig.TAG, "Unable to launch embedded VXV client", error)
-            toast(R.string.vxv_launch_failed)
-        }
-    }
-
-    private fun restoreXrayAfterVXV() {
-        val prefs = getSharedPreferences(VXV_SWITCH_PREFS, MODE_PRIVATE)
-        if (!prefs.getBoolean(KEY_VXV_HANDOFF_ACTIVE, false)) return
-
-        val shouldRestoreXray = prefs.getBoolean(KEY_RESTORE_XRAY, false)
-        // Clear before starting so repeated activity results cannot start Xray twice.
-        prefs.edit().clear().apply()
-        mainViewModel.onAction(MainAction.RefreshServiceState)
-        if (shouldRestoreXray) requestServiceStart()
-    }
-
     private fun navigateTo(destination: MainDestination) {
-        if (destination == MainDestination.VXV) {
-            // Keep the VPN engines mutually exclusive and never reuse Xray status for VXV.
-            // Launch the embedded Psiphon activity from this same APK.
-            val launchIntent = Intent(this, com.psiphon3.VXVActivity::class.java)
-
-            val prefs = getSharedPreferences(VXV_SWITCH_PREFS, MODE_PRIVATE)
-            val wasXrayRunning = mainViewModel.uiState.value.isRunning
-            prefs.edit()
-                .putBoolean(KEY_VXV_HANDOFF_ACTIVE, true)
-                .putBoolean(KEY_RESTORE_XRAY, wasXrayRunning)
-                .apply()
-
-            // Stop only our own Xray service; wait for its actual stopped state before VXV
-            // can request Android's single VPN slot.
-            if (wasXrayRunning) {
-                LauncherManager.stopService(this)
-                lifecycleScope.launch {
-                    val stopped = withTimeoutOrNull(5_000) {
-                        mainViewModel.uiState.first { !it.isRunning }
-                        true
-                    } ?: false
-                    if (!stopped) {
-                        prefs.edit().clear().apply()
-                        toast(R.string.vxv_stop_timeout)
-                        return@launch
-                    }
-                    launchVXV(launchIntent, wasXrayRunning)
-                }
-            } else {
-                launchVXV(launchIntent, wasXrayRunning)
+        if (destination == MainDestination.TorNetwork) {
+            // Open the existing Aether editor with a fresh profile; its Tor controls use the
+            // bundled core and bridge transports already built for this app.
+            val intent = Intent(this, ServerAetherActivity::class.java).apply {
+                putExtra("createConfigType", EConfigType.AETHER.value)
             }
+            profileEditorLauncher.launch(intent)
             return
         }
         val intent = when (destination) {
@@ -219,7 +158,7 @@ class MainActivity : HelperBaseComponentActivity() {
             MainDestination.Routing -> Intent(this, RoutingSettingActivity::class.java)
             MainDestination.UserAssets -> Intent(this, UserAssetActivity::class.java)
             MainDestination.Settings -> Intent(this, SettingsActivity::class.java)
-            MainDestination.VXV -> error("VXV is handled before building the settings intent")
+            MainDestination.TorNetwork -> error("Tor network is handled before building the settings intent")
             MainDestination.Logcat -> Intent(this, LogcatActivity::class.java)
             MainDestination.CheckUpdate -> Intent(this, CheckUpdateActivity::class.java)
             MainDestination.BackupRestore -> Intent(this, BackupActivity::class.java)
