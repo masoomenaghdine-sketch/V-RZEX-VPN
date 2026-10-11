@@ -10,9 +10,9 @@ import com.v2ray.ang.handler.AppLocaleManager
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.ui.compose.ThemeManager
-import com.psiphon3.PsiphonApplication
+import android.app.Application
 
-class AngApplication : PsiphonApplication() {
+class AngApplication : Application() {
     companion object {
         lateinit var application: AngApplication
     }

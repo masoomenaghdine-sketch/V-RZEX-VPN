@@ -8,6 +8,3 @@
 	path = aether
 	url = https://github.com/patterniha/Aether.git
 	branch = main
-[submodule "V2rayNG/third_party/shirokhorshid"]
-	path = V2rayNG/third_party/shirokhorshid
-	url = https://github.com/shirokhorshid/shirokhorshid-android.git
