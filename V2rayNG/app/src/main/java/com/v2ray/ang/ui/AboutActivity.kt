@@ -1,32 +1,21 @@
 package com.v2ray.ang.ui
 
-import android.content.Intent
 import android.os.Bundle
-import android.webkit.WebView
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.BuildConfig
 import com.v2ray.ang.R
@@ -47,21 +36,16 @@ class AboutActivity : BaseComponentActivity() {
     @Composable
     override fun ScreenContent() {
         AboutScreen(
-            onBackClick = { finish() },
-            onTranslatorsClick = {
-                startActivity(Intent(this, TranslatorsActivity::class.java))
-            }
+            onBackClick = { finish() }
         )
     }
 }
 
 @Composable
 fun AboutScreen(
-    onBackClick: () -> Unit,
-    onTranslatorsClick: () -> Unit
+    onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
-    var showOssDialog by remember { mutableStateOf(false) }
 
     val libVersion = CoreNativeManager.getLibVersion()
     val versionText = "v${BuildConfig.VERSION_NAME} ($libVersion)"
@@ -82,29 +66,6 @@ fun AboutScreen(
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
         ) {
-            SettingsMenuItem(
-                icon = painterResource(R.drawable.ic_source_code_24dp),
-                title = stringResource(R.string.title_source_code),
-                onClick = { Utils.openUri(context, AppConfig.APP_URL) }
-            )
-            SettingsMenuItem(
-                icon = painterResource(R.drawable.license_24px),
-                title = stringResource(R.string.title_oss_license),
-                onClick = { showOssDialog = true }
-            )
-            // The Aether binary is not a Gradle dependency, so the generated license report
-            // cannot list it; its AGPL-3.0 notice and source link live here instead.
-            SettingsMenuItem(
-                icon = painterResource(R.drawable.license_24px),
-                title = stringResource(R.string.title_aether_core),
-                subtitle = stringResource(R.string.summary_aether_core),
-                onClick = { Utils.openUri(context, AppConfig.AETHER_URL) }
-            )
-            SettingsMenuItem(
-                icon = painterResource(R.drawable.ic_translate_24dp),
-                title = stringResource(R.string.title_translators),
-                onClick = onTranslatorsClick
-            )
             SettingsMenuItem(
                 icon = painterResource(R.drawable.ic_feedback_24dp),
                 title = stringResource(R.string.title_pref_feedback),
@@ -128,29 +89,4 @@ fun AboutScreen(
         }
     }
 
-    if (showOssDialog) {
-        AlertDialog(
-            onDismissRequest = { showOssDialog = false },
-            title = { Text(stringResource(R.string.title_oss_license)) },
-            text = {
-                AndroidView(
-                    factory = { ctx ->
-                        WebView(ctx).apply {
-                            loadUrl("file:///android_asset/open_source_licenses.html")
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 300.dp)
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = { showOssDialog = false }) {
-                    Text(stringResource(R.string.action_ok))
-                }
-            },
-            containerColor = MaterialTheme.colorScheme.surface,
-            modifier = Modifier.padding(bottom = 60.dp)
-        )
-    }
 }
