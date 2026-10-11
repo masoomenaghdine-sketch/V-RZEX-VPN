@@ -125,6 +125,9 @@ class VorzexApiClient(
             if (parsed.scheme != "https") {
                 throw IllegalArgumentException("VØRZEX API must use HTTPS")
             }
+            if (parsed.query != null || parsed.fragment != null) {
+                throw IllegalArgumentException("API base URL must not contain a query or fragment")
+            }
             if (parsed.username.isNotEmpty() || parsed.password.isNotEmpty()) {
                 throw IllegalArgumentException("Credentials must not be embedded in the API URL")
             }
