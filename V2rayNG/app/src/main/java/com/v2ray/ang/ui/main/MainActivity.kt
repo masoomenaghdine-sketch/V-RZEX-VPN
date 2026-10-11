@@ -148,6 +148,11 @@ class MainActivity : HelperBaseComponentActivity() {
         val wasRunning = state.isRunning
         // Restore only if the main service was actually running before entering VXV.
         // A merely selected profile must not cause a previously stopped VPN to start on exit.
+        if (wasRunning && state.selectedGuid.isNullOrBlank()) {
+            openingVXV = false
+            toastError(R.string.vxv_stop_main_failed)
+            return
+        }
         val shouldRestartMain = wasRunning && !state.selectedGuid.isNullOrBlank()
         val intent = Intent(this, VXVActivity::class.java).apply {
             putExtra(VXVActivity.EXTRA_RESTORE_MAIN, shouldRestartMain)
