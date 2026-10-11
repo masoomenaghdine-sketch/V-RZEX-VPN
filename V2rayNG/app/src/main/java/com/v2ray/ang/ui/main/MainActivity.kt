@@ -143,7 +143,7 @@ class MainActivity : HelperBaseComponentActivity() {
     }
 
     private fun navigateTo(destination: MainDestination) {
-        if (destination == MainDestination.VXV) {
+        if (destination == MainDestination.TorNetwork) {
             // Open a Tor-only starter profile in the existing Aether editor. The existing
             // Tor/lyrebird engine is reused; existing VPN profiles and settings remain intact.
             startActivity(
@@ -158,7 +158,7 @@ class MainActivity : HelperBaseComponentActivity() {
             MainDestination.Routing -> Intent(this, RoutingSettingActivity::class.java)
             MainDestination.UserAssets -> Intent(this, UserAssetActivity::class.java)
             MainDestination.Settings -> Intent(this, SettingsActivity::class.java)
-            MainDestination.VXV -> error("VXV is handled before building the settings intent")
+            MainDestination.TorNetwork -> error("VXV is handled before building the settings intent")
             MainDestination.Logcat -> Intent(this, LogcatActivity::class.java)
             MainDestination.CheckUpdate -> Intent(this, CheckUpdateActivity::class.java)
             MainDestination.BackupRestore -> Intent(this, BackupActivity::class.java)
