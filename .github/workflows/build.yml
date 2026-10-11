@@ -9,6 +9,9 @@ on:
   push:
     branches:
       - master
+  pull_request:
+    branches:
+      - my-releases
 
 permissions:
   contents: write
@@ -28,6 +31,7 @@ jobs:
       # Required by the embedded Shir o Khorshid/Psiphon Android client.
       PSIPHON_PROPAGATION_CHANNEL_ID: ${{ secrets.PSIPHON_PROPAGATION_CHANNEL_ID }}
       PSIPHON_SPONSOR_ID: ${{ secrets.PSIPHON_SPONSOR_ID }}
+      PSIPHON_EMBEDDED_SERVER_LIST_FILE: ${{ github.workspace }}/V2rayNG/third_party/shirokhorshid/app/psiphon_servers.txt
 
     steps:
     - name: Checkout code
