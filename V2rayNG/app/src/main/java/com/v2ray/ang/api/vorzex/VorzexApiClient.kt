@@ -5,6 +5,7 @@ import com.google.gson.JsonParseException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -127,8 +128,13 @@ class VorzexApiClient(
             if (parsed.username.isNotEmpty() || parsed.password.isNotEmpty()) {
                 throw IllegalArgumentException("Credentials must not be embedded in the API URL")
             }
+            val normalizedPath = if (parsed.encodedPath.endsWith("/")) {
+                parsed.encodedPath
+            } else {
+                parsed.encodedPath + "/"
+            }
             return parsed.newBuilder()
-                .addPathSegments(if (parsed.encodedPath.endsWith("/")) "" else "/")
+                .encodedPath(normalizedPath)
                 .build()
         }
 
