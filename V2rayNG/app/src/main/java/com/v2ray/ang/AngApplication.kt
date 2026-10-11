@@ -1,5 +1,6 @@
 package com.v2ray.ang
 
+import android.app.Application
 import android.content.Context
 import androidx.core.content.ContextCompat
 import androidx.work.Configuration
@@ -10,9 +11,8 @@ import com.v2ray.ang.handler.AppLocaleManager
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.ui.compose.ThemeManager
-import com.psiphon3.PsiphonApplication
 
-class AngApplication : PsiphonApplication() {
+class AngApplication : Application() {
     companion object {
         lateinit var application: AngApplication
     }
