@@ -41,7 +41,7 @@ jobs:
       with:
         log-accepted-android-sdk-licenses: false
         cmdline-tools-version: '14742923'
-        packages: 'platforms;android-37.0 build-tools;37.0.0 platform-tools'
+        packages: 'platforms;android-37 build-tools;37.0.0 platform-tools'
 
     - name: Install NDK
       run: |
@@ -49,9 +49,6 @@ jobs:
           --channel=0 \
           --install "ndk;30.0.16248370"
         echo "NDK_HOME=$ANDROID_HOME/ndk/30.0.16248370" >> $GITHUB_ENV
-        sed -i '10i\
-        \
-            ndkVersion = "30.0.16248370"' ${{ github.workspace }}/V2rayNG/app/build.gradle.kts
 
     - name: Restore cached libhevtun
       id: cache-libhevtun-restore
@@ -208,10 +205,16 @@ jobs:
     
     - name: Check the native libraries in the APKs
       run: |
-        # Looked into as ZIP files: every ABI the Aether core is built for has to carry the core, its
-        # Psiphon client and its pluggable transport, and each APK's native files are listed for the record.
+        # Every ABI shipped in an APK must include the Aether core, Psiphon client and Tor transport.
+        set -euo pipefail
+        apk_dir="${{ github.workspace }}/V2rayNG/app/build/outputs/apk"
+        mapfile -d '' apks < <(find "$apk_dir" -type f -name '*.apk' -print0)
+        if [ ${#apks[@]} -eq 0 ]; then
+          echo "::error::No APKs were produced under $apk_dir"
+          exit 1
+        fi
         status=0
-        for apk in ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/*/{debug,release}/*.apk; do
+        for apk in "${apks[@]}"; do
           entries=$(unzip -Z1 "$apk" | grep '^lib/' || true)
           echo "$(basename "$apk"):"
           echo "$entries" | sed 's/^/  /'
@@ -225,7 +228,7 @@ jobs:
             done
           done
         done
-        exit $status
+        exit "$status"
 
     - name: Upload arm64-v8a APK
       uses: actions/upload-artifact@v7
