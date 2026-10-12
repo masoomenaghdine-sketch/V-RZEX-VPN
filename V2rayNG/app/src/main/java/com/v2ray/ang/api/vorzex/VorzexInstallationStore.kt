@@ -7,6 +7,7 @@ import android.security.keystore.KeyProperties
 import android.util.Base64
 import java.security.KeyStore
 import java.security.MessageDigest
+import java.security.SecureRandom
 import java.util.Locale
 import java.math.BigInteger
 import javax.crypto.Cipher
@@ -69,6 +70,20 @@ class VorzexInstallationStore(context: Context) {
         return created
     }
 
+    /**
+     * High-entropy API identity, separate from the 12-digit code shown on the Device screen.
+     * It is only registered after the user explicitly chooses to send Device-screen information.
+     */
+    fun apiInstallationId(): String {
+        val existing = prefs.getString(KEY_API_INSTALLATION_ID, null)
+        if (existing != null && existing.matches(Regex("[0-9a-f]{64}"))) return existing
+        val bytes = ByteArray(32)
+        SecureRandom().nextBytes(bytes)
+        val created = bytes.joinToString("") { "%02x".format(it) }
+        prefs.edit().putString(KEY_API_INSTALLATION_ID, created).apply()
+        return created
+    }
+
     fun saveToken(token: String) {
         require(token.isNotBlank()) { "Installation token must not be blank" }
         val cipher = Cipher.getInstance(TRANSFORMATION)
@@ -116,6 +131,7 @@ class VorzexInstallationStore(context: Context) {
         const val IV_LENGTH = 12
         const val KEY_INSTALLATION_ID = "installation_id"
         const val KEY_TOKEN = "installation_token"
+        const val KEY_API_INSTALLATION_ID = "api_installation_id"
         const val KEY_CONSENT_DECIDED = "consent_decided"
         const val KEY_CONSENT_GRANTED = "consent_granted"
         const val KEY_CONSENTED_AT = "consented_at"
