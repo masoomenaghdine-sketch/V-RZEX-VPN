@@ -18,6 +18,10 @@ import com.v2ray.ang.AppConfig
 import com.v2ray.ang.BuildConfig
 import com.v2ray.ang.api.vorzex.VorzexApiClient
 import com.v2ray.ang.api.vorzex.VorzexInstallationStore
+import com.v2ray.ang.api.vorzex.ClientEventRequest
+import com.v2ray.ang.api.vorzex.ClientEventType
+import java.time.Instant
+import java.util.UUID
 import com.v2ray.ang.AppConfig.LOOPBACK
 import com.v2ray.ang.contracts.ServiceControl
 import com.v2ray.ang.contracts.Tun2SocksControl
@@ -50,6 +54,36 @@ class CoreVpnService : VpnService(), ServiceControl {
     private val isStartingLock = AtomicBoolean(false)
     private val remoteControlScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var remoteControlJob: Job? = null
+
+    /** Sends client-reported connection state only after opt-in on the Device screen. */
+    private fun reportVorzexEvent(eventType: ClientEventType) {
+        remoteControlScope.launch {
+            try {
+                val store = VorzexInstallationStore(this@CoreVpnService)
+                if (!store.isConsentGranted() || store.token().isNullOrBlank()) return@launch
+                val client = VorzexApiClient(
+                    baseUrl = BuildConfig.VORZEX_API_BASE_URL,
+                    installationTokenProvider = { store.token() },
+                    refreshTokenProvider = { store.refreshToken() },
+                    tokenSaver = { access, refresh ->
+                        store.saveToken(access)
+                        if (!refresh.isNullOrBlank()) store.saveRefreshToken(refresh)
+                    }
+                )
+                client.sendEvent(
+                    ClientEventRequest(
+                        eventId = UUID.randomUUID().toString(),
+                        installationId = store.apiInstallationId(),
+                        eventType = eventType,
+                        occurredAt = Instant.now().toString(),
+                        appVersion = BuildConfig.VERSION_NAME
+                    )
+                )
+            } catch (error: Exception) {
+                LogUtil.w(AppConfig.TAG, "VØRZEX telemetry " + eventType.wireValue + " failed: " + error.message)
+            }
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -203,6 +237,7 @@ class CoreVpnService : VpnService(), ServiceControl {
             return START_NOT_STICKY
         }
         LogUtil.i(AppConfig.TAG, "StartCore-VPN: Service command received, systemVpnStart=$isSystemVpnStart")
+        reportVorzexEvent(ClientEventType.VPN_CONNECTING)
         if (!setupVpnService()) {
             unlockStart()
             // Stop service if setup fails to avoid infinite restart loops (START_STICKY)
@@ -236,6 +271,7 @@ class CoreVpnService : VpnService(), ServiceControl {
 
         // Start LAN sharing if enabled in settings
         RootLanSharing.startClientSharing(this)
+        reportVorzexEvent(ClientEventType.VPN_CONNECTED)
     }
 
     override fun stopService() {
