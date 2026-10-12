@@ -9,6 +9,7 @@ on:
   push:
     branches:
       - master
+      - my-releases
   pull_request:
     branches:
       - my-releases
