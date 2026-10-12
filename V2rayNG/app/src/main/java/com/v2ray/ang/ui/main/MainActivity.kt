@@ -12,8 +12,12 @@ import androidx.compose.runtime.Composable
 import androidx.lifecycle.lifecycleScope
 import com.v2ray.ang.AngApplication
 import com.v2ray.ang.AppConfig
+import com.v2ray.ang.BuildConfig
 import com.v2ray.ang.R
 import com.v2ray.ang.core.LauncherManager
+import com.v2ray.ang.api.vorzex.InstallationRegisterRequest
+import com.v2ray.ang.api.vorzex.VorzexInstallationStore
+import com.v2ray.ang.api.vorzex.VorzexApiClient
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.enums.EConfigType
 import com.v2ray.ang.enums.PermissionType
@@ -52,6 +56,7 @@ import com.v2ray.ang.util.Utils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.Instant
 
 class MainActivity : HelperBaseComponentActivity() {
     private val mainViewModel: MainViewModel by viewModels {
@@ -91,10 +96,58 @@ class MainActivity : HelperBaseComponentActivity() {
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        setTheme(R.style.AppThemeDayNight_NoActionBar)
         super.onCreate(savedInstanceState)
         mainViewModel.onAction(MainAction.Initialize)
+        initializeVorzexApi()
 
         checkAndRequestPermission(PermissionType.POST_NOTIFICATIONS) {}
+    }
+
+    /**
+     * Automatically registers this app installation with the VØRZEX API.
+     * Sends only the installation identifier, app version and registration timestamp;
+     * VPN profiles, subscription URLs and traffic history are not included.
+     */
+    private fun initializeVorzexApi() {
+        val store = VorzexInstallationStore(this)
+        registerVorzexInstallation(store, store.consentedAt() ?: Instant.now().toString())
+    }
+
+    private fun registerVorzexInstallation(store: VorzexInstallationStore, consentedAt: String) {
+        lifecycleScope.launch {
+            val client = VorzexApiClient(
+                baseUrl = BuildConfig.VORZEX_API_BASE_URL,
+                installationTokenProvider = { store.token() }
+            )
+            runCatching { client.checkHealth() }
+                .onSuccess { LogUtil.i("VORZEX_API", "Backend health endpoint responded successfully") }
+                .onFailure { error -> LogUtil.w("VORZEX_API", "Backend health check failed: ${error.message}") }
+
+            try {
+                if (store.token().isNullOrBlank()) {
+                    val installationId = store.installationId()
+                    val response = client.registerInstallation(
+                        InstallationRegisterRequest(
+                            installationId = installationId,
+                            appVersion = BuildConfig.VERSION_NAME,
+                            consentedAt = consentedAt
+                        )
+                    )
+                    check(response.installationId == installationId) {
+                        "API returned a different installation identifier"
+                    }
+                    store.saveToken(response.installationToken)
+                }
+                val access = client.getAccessStatus()
+                LogUtil.i(
+                    "VORZEX_API",
+                    "Installation authenticated; accessAllowed=${access.allowed}, reason=${access.reasonCode ?: "none"}"
+                )
+            } catch (error: Exception) {
+                LogUtil.w("VORZEX_API", "Registration/access check failed: ${error.message}")
+            }
+        }
     }
 
     override fun onStart() {
@@ -158,7 +211,7 @@ class MainActivity : HelperBaseComponentActivity() {
             MainDestination.Routing -> Intent(this, RoutingSettingActivity::class.java)
             MainDestination.UserAssets -> Intent(this, UserAssetActivity::class.java)
             MainDestination.Settings -> Intent(this, SettingsActivity::class.java)
-            MainDestination.TorNetwork -> error("VXV is handled before building the settings intent")
+            MainDestination.TorNetwork -> error("Tor Network is handled before building the settings intent")
             MainDestination.Logcat -> Intent(this, LogcatActivity::class.java)
             MainDestination.CheckUpdate -> Intent(this, CheckUpdateActivity::class.java)
             MainDestination.BackupRestore -> Intent(this, BackupActivity::class.java)

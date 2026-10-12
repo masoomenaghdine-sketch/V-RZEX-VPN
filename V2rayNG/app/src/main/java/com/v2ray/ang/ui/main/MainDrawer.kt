@@ -49,8 +49,7 @@ private val primaryDrawerItems = listOf(
     MainDestination.PerAppProxy,
     MainDestination.Routing,
     MainDestination.UserAssets,
-    MainDestination.Settings,
-    MainDestination.TorNetwork
+    MainDestination.Settings
 )
 
 private val drawerItems = primaryDrawerItems + listOf(
@@ -87,10 +86,9 @@ fun MainDrawerContent(drawerState: DrawerState, onNavigate: (MainDestination) ->
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    // PattNG: full-color circular logo, no dark-mode tint (tinting a photo logo
-                    // would flatten it into a white disc)
+                    // VØRZEX branding
                     Image(
-                        painter = painterResource(R.drawable.ic_pattng_logo),
+                        painter = painterResource(R.drawable.vorzex_icon_foreground),
                         contentDescription = null,
                         modifier = Modifier.size(120.dp)
                     )

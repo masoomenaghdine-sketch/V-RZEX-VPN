@@ -37,7 +37,8 @@ enum class MainMoreMenuAction(@StringRes val labelRes: Int) {
     SortByTestResults(R.string.title_sort_by_test_results),
     TestAll(R.string.title_ping_all_server),
     TestAllRealPing(R.string.title_real_ping_all_server),
-    UpdateSubscriptions(R.string.title_sub_update)
+    UpdateSubscriptions(R.string.title_sub_update),
+    TorNetwork(R.string.tor_network_title)
 }
 
 internal enum class ServerMenuAction(

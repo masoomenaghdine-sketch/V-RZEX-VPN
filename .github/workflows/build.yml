@@ -12,6 +12,7 @@ on:
   pull_request:
     branches:
       - my-releases
+      - feature/vxv-tor-slipnet-replacement
 
 permissions:
   contents: write
@@ -283,14 +284,14 @@ jobs:
             gpg --batch --yes --local-user "$KEY" --detach-sign --output "release-files/$(basename "$apk").sig" "$apk"
           done
 
-          gpg --armor --export "$KEY" > release-files/PattNG-public-key.asc
+          gpg --armor --export "$KEY" > release-files/VORZEX-VPN-public-key.asc
 
       - name: Upload APKs, signatures and public key to release
         uses: svenstaro/upload-release-action@v2
         with:
           file: release-files/*
           tag: ${{ inputs.release_tag }}
-          release_name: PattNG v${{ inputs.release_tag }}
+          release_name: VØRZEX VPN v${{ inputs.release_tag }}
           body: "."
           target_commit: ${{ github.sha }}
           file_glob: true
