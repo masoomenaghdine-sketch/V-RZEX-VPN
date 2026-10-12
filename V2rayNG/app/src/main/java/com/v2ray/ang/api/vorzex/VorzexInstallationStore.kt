@@ -20,7 +20,8 @@ import javax.crypto.spec.GCMParameterSpec
  * VPN profiles and traffic data are never stored here.
  */
 class VorzexInstallationStore(context: Context) {
-    private val prefs = context.applicationContext.getSharedPreferences(
+    private val appContext = context.applicationContext
+    private val prefs = appContext.getSharedPreferences(
         "vorzex_installation_v1",
         Context.MODE_PRIVATE
     )
@@ -53,7 +54,7 @@ class VorzexInstallationStore(context: Context) {
         val existing = prefs.getString(KEY_INSTALLATION_ID, null)
         if (existing != null && existing.matches(Regex("\\d{12}"))) return existing
         val androidId = Settings.Secure.getString(
-            context.applicationContext.contentResolver,
+            appContext.contentResolver,
             Settings.Secure.ANDROID_ID
         ).orEmpty().ifBlank { "unknown-device" }
         val digest = MessageDigest.getInstance("SHA-256")
