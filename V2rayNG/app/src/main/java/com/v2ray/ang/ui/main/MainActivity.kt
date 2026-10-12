@@ -1,7 +1,6 @@
 package com.v2ray.ang.ui.main
 
 import android.content.Intent
-import androidx.appcompat.app.AlertDialog
 import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
@@ -106,30 +105,13 @@ class MainActivity : HelperBaseComponentActivity() {
     }
 
     /**
-     * Registers this installation only after explicit consent. No VPN profile, subscription URL,
-     * traffic history, or private key is sent to the VØRZEX API.
+     * Automatically registers this app installation with the VØRZEX API.
+     * Sends only the installation identifier, app version and registration timestamp;
+     * VPN profiles, subscription URLs and traffic history are not included.
      */
     private fun initializeVorzexApi() {
         val store = VorzexInstallationStore(this)
-        if (!store.hasConsentDecision()) {
-            AlertDialog.Builder(this)
-                .setTitle("VØRZEX VPN · حریم خصوصی")
-                .setMessage("برای شناسایی دستگاه در پنل، شناسه نصب، نسخه برنامه و زمان رضایت به API ارسال می‌شود. اطلاعات پروفایل VPN یا تاریخچه ترافیک ارسال نمی‌شود. ادامه می‌دهی؟")
-                .setPositiveButton("موافقم") { _, _ ->
-                    val consentedAt = Instant.now().toString()
-                    store.setConsent(true, consentedAt)
-                    registerVorzexInstallation(store, consentedAt)
-                }
-                .setNegativeButton("فعلاً نه") { _, _ ->
-                    store.setConsent(false, null)
-                }
-                .setCancelable(false)
-                .show()
-            return
-        }
-        if (store.isConsentGranted()) {
-            registerVorzexInstallation(store, store.consentedAt() ?: Instant.now().toString())
-        }
+        registerVorzexInstallation(store, store.consentedAt() ?: Instant.now().toString())
     }
 
     private fun registerVorzexInstallation(store: VorzexInstallationStore, consentedAt: String) {
