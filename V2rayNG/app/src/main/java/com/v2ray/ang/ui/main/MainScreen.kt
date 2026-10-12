@@ -39,10 +39,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.v2ray.ang.BuildConfig
 import com.v2ray.ang.R
-import com.v2ray.ang.api.vorzex.PublishedConfig
-import com.v2ray.ang.api.vorzex.VorzexApiClient
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.extension.toastError
 import com.v2ray.ang.ui.compose.LocalDarkTheme
@@ -81,29 +78,6 @@ fun MainScreen(
     val isDarkTheme = LocalDarkTheme.current
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    var publishedConfigs by remember { mutableStateOf<List<PublishedConfig>>(emptyList()) }
-    var publishedConfigsLoading by remember { mutableStateOf(false) }
-    var publishedConfigsError by remember { mutableStateOf(false) }
-
-    val refreshPublishedConfigs: () -> Unit = {
-        scope.launch {
-            publishedConfigsLoading = true
-            runCatching {
-                VorzexApiClient(baseUrl = BuildConfig.VORZEX_API_BASE_URL).getPublishedConfigs()
-            }.onSuccess { response ->
-                publishedConfigs = if (response.ok) response.configs else emptyList()
-                publishedConfigsError = !response.ok
-            }.onFailure {
-                publishedConfigsError = true
-            }
-            publishedConfigsLoading = false
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        refreshPublishedConfigs()
-    }
-
     var showSearch by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var showDelAllConfirm by remember { mutableStateOf(false) }
@@ -253,13 +227,9 @@ fun MainScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                PublishedConfigsPanel(
-                    configs = publishedConfigs,
-                    loading = publishedConfigsLoading,
-                    error = publishedConfigsError,
-                    onRefresh = refreshPublishedConfigs,
-                    onDevice = { onNavigate(MainDestination.Device) },
-                    onImport = { config -> onAction(MainAction.ImportBatchConfig(config)) }
+                QuickAccessPanel(
+                    onCnr = { onNavigate(MainDestination.Cnr) },
+                    onDevice = { onNavigate(MainDestination.Device) }
                 )
                 if (groups.isNotEmpty()) {
                     Column(modifier = Modifier.weight(1f)) {
@@ -323,62 +293,42 @@ fun MainScreen(
 
 
 @Composable
-private fun PublishedConfigsPanel(
-    configs: List<PublishedConfig>,
-    loading: Boolean,
-    error: Boolean,
-    onRefresh: () -> Unit,
-    onDevice: () -> Unit,
-    onImport: (String) -> Unit
+private fun QuickAccessPanel(
+    onCnr: () -> Unit,
+    onDevice: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainer
+        )
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            Text(
+                "VØRZEX VPN",
+                style = androidx.compose.material3.MaterialTheme.typography.titleMedium
+            )
+            Text(
+                "اتصال و مدیریت کانفیگ‌ها بدون نیاز به API ربات",
+                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("کانفیگ‌های مدیریت VØRZEX", style = androidx.compose.material3.MaterialTheme.typography.titleSmall)
-                Button(onClick = onDevice) {
-                    Text("دستگاه")
+                Button(onClick = onCnr, modifier = Modifier.weight(1f)) {
+                    Text("کانفیگ‌های CNR")
                 }
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                Button(onClick = onRefresh, enabled = !loading) {
-                    Text(if (loading) "..." else "بروزرسانی کانفیگ‌ها")
-                }
-            }
-            when {
-                error && configs.isEmpty() -> Text("دریافت کانفیگ‌ها از API ناموفق بود؛ اتصال را بررسی و دوباره تلاش کن.")
-                configs.isEmpty() -> Text("هنوز کانفیگی از پنل مدیریت منتشر نشده است.")
-                else -> LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(configs, key = { it.id }) { item ->
-                        Card(
-                            modifier = Modifier.padding(vertical = 2.dp),
-                            colors = CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(10.dp),
-                                verticalArrangement = Arrangement.spacedBy(5.dp)
-                            ) {
-                                Text(item.name, style = androidx.compose.material3.MaterialTheme.typography.titleSmall)
-                                Text(item.protocol, style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
-                                Button(onClick = { onImport(item.config) }) {
-                                    Text("افزودن")
-                                }
-                            }
-                        }
-                    }
+                Button(onClick = onDevice, modifier = Modifier.weight(1f)) {
+                    Text("اطلاعات دستگاه")
                 }
             }
         }
