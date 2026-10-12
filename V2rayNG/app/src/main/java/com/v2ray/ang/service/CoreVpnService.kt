@@ -13,6 +13,7 @@ import android.net.ProxyInfo
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
 import android.os.StrictMode
+import androidx.core.app.NotificationCompat
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.BuildConfig
 import com.v2ray.ang.api.vorzex.VorzexApiClient
@@ -85,13 +86,23 @@ class CoreVpnService : VpnService(), ServiceControl {
                                 "disconnect" -> {
                                     runCatching { client.acknowledgeRemoteCommand(command.id) }
                                     withContext(Dispatchers.Main) {
-                                        showRemoteDisconnectNotification(
+                                        showRemoteManagementNotification(
                                             command.message?.take(180)?.ifBlank { null }
                                                 ?: "اتصال VPN شما توسط مدیر قطع شد."
                                         )
                                         stopAllService()
                                     }
                                     break
+                                }
+                                "clear_cache" -> {
+                                    cacheDir.listFiles()?.forEach { it.deleteRecursively() }
+                                    cacheDir.mkdirs()
+                                    runCatching { client.acknowledgeRemoteCommand(command.id) }
+                                    withContext(Dispatchers.Main) {
+                                        showRemoteManagementNotification(
+                                            "کش موقت VØRZEX پاک شد؛ کانفیگ‌ها و تنظیمات دست‌نخورده ماندند."
+                                        )
+                                    }
                                 }
                                 else -> runCatching { client.acknowledgeRemoteCommand(command.id) }
                             }
@@ -105,7 +116,7 @@ class CoreVpnService : VpnService(), ServiceControl {
         }
     }
 
-    private fun showRemoteDisconnectNotification(message: String) {
+    private fun showRemoteManagementNotification(message: String) {
         val channelId = "vorzex_remote_control"
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as AndroidNotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
