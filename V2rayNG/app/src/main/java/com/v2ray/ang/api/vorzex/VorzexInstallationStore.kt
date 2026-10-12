@@ -103,8 +103,27 @@ class VorzexInstallationStore(context: Context) {
         String(cipher.doFinal(ciphertext), Charsets.UTF_8)
     }.getOrNull()
 
+    fun saveRefreshToken(token: String) {
+        require(token.isNotBlank()) { "Refresh token must not be blank" }
+        val cipher = Cipher.getInstance(TRANSFORMATION)
+        cipher.init(Cipher.ENCRYPT_MODE, key())
+        val encrypted = cipher.doFinal(token.toByteArray(Charsets.UTF_8))
+        val packed = cipher.iv + encrypted
+        prefs.edit().putString(KEY_REFRESH_TOKEN, Base64.encodeToString(packed, Base64.NO_WRAP)).apply()
+    }
+
+    fun refreshToken(): String? = runCatching {
+        val packed = Base64.decode(prefs.getString(KEY_REFRESH_TOKEN, null), Base64.NO_WRAP)
+        require(packed.size > IV_LENGTH) { "Invalid encrypted refresh token" }
+        val iv = packed.copyOfRange(0, IV_LENGTH)
+        val ciphertext = packed.copyOfRange(IV_LENGTH, packed.size)
+        val cipher = Cipher.getInstance(TRANSFORMATION)
+        cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, iv))
+        String(cipher.doFinal(ciphertext), Charsets.UTF_8)
+    }.getOrNull()
+
     fun clearToken() {
-        prefs.edit().remove(KEY_TOKEN).apply()
+        prefs.edit().remove(KEY_TOKEN).remove(KEY_REFRESH_TOKEN).apply()
     }
 
     private fun key(): SecretKey {
@@ -131,6 +150,7 @@ class VorzexInstallationStore(context: Context) {
         const val IV_LENGTH = 12
         const val KEY_INSTALLATION_ID = "installation_id"
         const val KEY_TOKEN = "installation_token"
+        const val KEY_REFRESH_TOKEN = "refresh_token"
         const val KEY_API_INSTALLATION_ID = "api_installation_id"
         const val KEY_CONSENT_DECIDED = "consent_decided"
         const val KEY_CONSENT_GRANTED = "consent_granted"
