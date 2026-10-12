@@ -12,8 +12,10 @@ import androidx.compose.runtime.Composable
 import androidx.lifecycle.lifecycleScope
 import com.v2ray.ang.AngApplication
 import com.v2ray.ang.AppConfig
+import com.v2ray.ang.BuildConfig
 import com.v2ray.ang.R
 import com.v2ray.ang.core.LauncherManager
+import com.v2ray.ang.api.vorzex.VorzexApiClient
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.enums.EConfigType
 import com.v2ray.ang.enums.PermissionType
@@ -54,7 +56,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class MainActivity : HelperBaseComponentActivity() {
-
     private val mainViewModel: MainViewModel by viewModels {
         MainViewModel.Factory(application, MainRepository(application as AngApplication))
     }
@@ -92,10 +93,28 @@ class MainActivity : HelperBaseComponentActivity() {
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        setTheme(R.style.AppThemeDayNight_NoActionBar)
         super.onCreate(savedInstanceState)
         mainViewModel.onAction(MainAction.Initialize)
+        initializeVorzexApi()
 
         checkAndRequestPermission(PermissionType.POST_NOTIFICATIONS) {}
+    }
+
+    /**
+     * Checks API availability only. No device identifier, app version, IP, VPN profile,
+     * subscription URL, or traffic history is transmitted automatically.
+     */
+    private fun initializeVorzexApi() {
+        lifecycleScope.launch {
+            runCatching {
+                VorzexApiClient(baseUrl = BuildConfig.VORZEX_API_BASE_URL).checkHealth()
+            }.onSuccess {
+                LogUtil.i("VORZEX_API", "Backend health endpoint responded successfully")
+            }.onFailure { error ->
+                LogUtil.w("VORZEX_API", "Backend health check failed: ${error.message}")
+            }
+        }
     }
 
     override fun onStart() {
@@ -144,12 +163,22 @@ class MainActivity : HelperBaseComponentActivity() {
     }
 
     private fun navigateTo(destination: MainDestination) {
+        if (destination == MainDestination.TorNetwork) {
+            // Open a Tor-only starter profile in the existing Aether editor. The existing
+            // Tor/lyrebird engine is reused; existing VPN profiles and settings remain intact.
+            startActivity(
+                Intent(this, ServerAetherActivity::class.java)
+                    .putExtra(ServerAetherActivity.EXTRA_TOR_QUICK_SETUP, true)
+            )
+            return
+        }
         val intent = when (destination) {
             MainDestination.Subscriptions -> Intent(this, SubSettingActivity::class.java)
             MainDestination.PerAppProxy -> Intent(this, PerAppProxyActivity::class.java)
             MainDestination.Routing -> Intent(this, RoutingSettingActivity::class.java)
             MainDestination.UserAssets -> Intent(this, UserAssetActivity::class.java)
             MainDestination.Settings -> Intent(this, SettingsActivity::class.java)
+            MainDestination.TorNetwork -> error("Tor Network is handled before building the settings intent")
             MainDestination.Logcat -> Intent(this, LogcatActivity::class.java)
             MainDestination.CheckUpdate -> Intent(this, CheckUpdateActivity::class.java)
             MainDestination.BackupRestore -> Intent(this, BackupActivity::class.java)
