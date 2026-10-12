@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     
-    <string name="cnr_title">CNR · Free Configs</string>
+    
+    <string name="device_title">Device</string>
+<string name="cnr_title">CNR · Free Configs</string>
 <string name="app_name" translatable="false">VØRZEX VPN</string>
     <string name="tor_network_title">CNR</string>
     <string name="tor_profile_name">Tor · VØRZEX</string>
