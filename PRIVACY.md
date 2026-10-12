@@ -4,17 +4,19 @@ Last updated: 12 October 2026
 
 ## Information sent to the VØRZEX service
 
-Only after you explicitly agree in the app, VØRZEX VPN sends the random installation identifier, app version, and consent timestamp to the configured VØRZEX API. The API may issue an installation token and return an access-status decision so the administrator can manage installations.
+At startup, the app makes a lightweight HTTPS request to the configured VØRZEX Worker health endpoint. Like any network request, the Worker and network infrastructure may receive the request's public source IP address and standard connection metadata.
 
-The app does not intentionally send VPN profile contents, subscription URLs, private keys, browsing history, or traffic payloads through the installation-registration request.
+The current Android client does **not** automatically submit the local 12-digit device code, Android ID, device model, app version, consent timestamp, VPN profile contents, subscription URLs, private keys, browsing history, or traffic payloads to the VØRZEX API. Installation registration, telemetry, and access-policy calls are not enabled in the startup flow.
 
-## Network and connection information
+## Device screen and local storage
 
-If a future feature displays your public IP address or connection duration, that information should be disclosed in the relevant screen before it is sent to any service. Do not treat client-reported connection events as proof of actual network activity.
+The Device screen displays the device model, Android version, app version, a locally stored 12-digit pseudonymous device code, and local IPv4 addresses where available. These displayed values are not uploaded by that screen. The app does not request a third-party service to discover the public IP address.
 
-## Consent and local storage
+The pseudonymous device code is derived from Android's app-scoped device identifier and stored locally. It can change after a factory reset or a signing-identity change.
 
-You can decline installation registration. The app stores the consent decision locally and stores any API bearer token encrypted using Android Keystore. Clearing app data or uninstalling the app may remove local identifiers; cross-install persistence requires server-side support and is not guaranteed by local storage alone.
+## VPN profiles and traffic
+
+VPN profiles, subscription URLs, credentials, private keys, browsing history, and traffic contents are not sent through the API health request. Public configuration sources opened from the CNR screen are hosted by the referenced public GitHub repository; importing a source makes a request to that host.
 
 ## Contact
 
