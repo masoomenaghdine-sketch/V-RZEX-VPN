@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     
-    <string name="cnr_title">CNR · کانفیگ‌های رایگان</string>
+    
+    <string name="device_title">دستگاه</string>
+<string name="cnr_title">CNR · کانفیگ‌های رایگان</string>
 <string name="tor_network_title">شبکهٔ تور · شبیه SlipNet</string>
     <string name="tor_profile_name">تور · VØRZEX</string>
     <string name="app_name" translatable="false">VØRZEX VPN</string>
