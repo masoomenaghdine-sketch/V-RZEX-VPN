@@ -15,6 +15,10 @@ on:
       - my-releases
       - feature/vxv-tor-slipnet-replacement
 
+concurrency:
+  group: vorzex-build-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
