@@ -302,7 +302,7 @@ private fun QuickAccessPanel(
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 8.dp),
         colors = CardDefaults.cardColors(
-            containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainer
+            containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
         Column(
