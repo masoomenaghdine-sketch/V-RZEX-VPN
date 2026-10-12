@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name" translatable="false">VØRZEX VPN</string>
-    <string name="tor_network_title">Tor</string>
+    <string name="tor_network_title">CNR</string>
     <string name="tor_profile_name">Tor · VØRZEX</string>
     <string name="app_widget_name">Switch</string>
     <string name="app_tile_name">Switch</string>
