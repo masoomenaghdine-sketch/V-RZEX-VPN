@@ -9,6 +9,7 @@ on:
   push:
     branches:
       - master
+      - my-releases
 
 permissions:
   contents: write
