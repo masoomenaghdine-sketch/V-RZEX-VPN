@@ -1,18 +1,21 @@
 package com.v2ray.ang.api.vorzex
 
 import android.content.Context
+import android.provider.Settings
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
 import java.security.KeyStore
-import java.util.UUID
+import java.security.MessageDigest
+import java.util.Locale
+import java.math.BigInteger
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 /**
- * Stores only the random installation ID, consent choice, and API token.
+ * Stores a stable device code, consent choice, and API token. The code is derived from Android ID so it survives app reinstall under the same Android signing identity.
  * The bearer token is encrypted with an Android Keystore AES-GCM key.
  * VPN profiles and traffic data are never stored here.
  */
@@ -40,10 +43,27 @@ class VorzexInstallationStore(context: Context) {
         if (!granted) clearToken()
     }
 
+    /**
+     * A 12-digit device code: eight pseudorandom-looking digits derived from SHA-256 and
+     * four trailing digits derived from Android ID. Android ID remains stable across reinstall
+     * for the same signing key, Android user, and device. Factory reset or signing-key changes
+     * may change it.
+     */
     fun installationId(): String {
         val existing = prefs.getString(KEY_INSTALLATION_ID, null)
-        if (!existing.isNullOrBlank()) return existing
-        val created = UUID.randomUUID().toString()
+        if (existing != null && existing.matches(Regex("\\d{12}"))) return existing
+        val androidId = Settings.Secure.getString(
+            context.applicationContext.contentResolver,
+            Settings.Secure.ANDROID_ID
+        ).orEmpty().ifBlank { "unknown-device" }
+        val digest = MessageDigest.getInstance("SHA-256")
+            .digest("VORZEX_DEVICE_CODE_V1:$androidId".toByteArray(Charsets.UTF_8))
+        val firstEight = BigInteger(1, digest.copyOfRange(0, 8))
+            .mod(BigInteger.valueOf(100_000_000L)).toLong()
+        val suffixSource = androidId.takeLast(8).toLongOrNull(16)
+            ?: androidId.hashCode().toLong().and(0xffffL)
+        val lastFour = suffixSource % 10_000L
+        val created = String.format(Locale.US, "%08d%04d", firstEight, lastFour)
         prefs.edit().putString(KEY_INSTALLATION_ID, created).apply()
         return created
     }
