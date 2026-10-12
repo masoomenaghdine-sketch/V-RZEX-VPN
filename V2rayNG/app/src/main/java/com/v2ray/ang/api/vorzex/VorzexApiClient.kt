@@ -69,7 +69,7 @@ class VorzexApiClient(
     )
 
     suspend fun acknowledgeRemoteCommand(commandId: String): Unit = post(
-        path = "v1/client/commands/$"+"{commandId}/ack",
+        path = "v1/client/commands/${commandId}/ack",
         payload = emptyMap<String, String>(),
         responseType = Unit::class.java,
         requiresToken = true
