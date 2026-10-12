@@ -1,5 +1,8 @@
 package com.v2ray.ang.ui.main
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Arrangement
@@ -20,6 +23,7 @@ import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -34,10 +38,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.R
 import com.v2ray.ang.dto.entities.ProfileItem
@@ -229,7 +235,9 @@ fun MainScreen(
             ) {
                 QuickAccessPanel(
                     onCnr = { onNavigate(MainDestination.Cnr) },
-                    onDevice = { onNavigate(MainDestination.Device) }
+                    onDevice = { onNavigate(MainDestination.Device) },
+                    onTor = { onNavigate(MainDestination.TorNetwork) },
+                    onSettings = { onNavigate(MainDestination.Settings) }
                 )
                 if (groups.isNotEmpty()) {
                     Column(modifier = Modifier.weight(1f)) {
@@ -295,42 +303,98 @@ fun MainScreen(
 @Composable
 private fun QuickAccessPanel(
     onCnr: () -> Unit,
-    onDevice: () -> Unit
+    onDevice: () -> Unit,
+    onTor: () -> Unit,
+    onSettings: () -> Unit
 ) {
-    Card(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
-        )
+            .padding(top = 6.dp, bottom = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+        Text(
+            text = "دسترسی سریع",
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(9.dp)
         ) {
-            Text(
-                "VØRZEX VPN",
-                style = androidx.compose.material3.MaterialTheme.typography.titleMedium
-            )
-            Text(
-                "اتصال و مدیریت کانفیگ‌ها بدون نیاز به API ربات",
-                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(onClick = onCnr, modifier = Modifier.weight(1f)) {
-                    Text("کانفیگ‌های CNR")
-                }
-                Button(onClick = onDevice, modifier = Modifier.weight(1f)) {
-                    Text("اطلاعات دستگاه")
-                }
+            item(key = "cnr") {
+                QuickNavItem(
+                    emoji = "🌐",
+                    title = "کانفیگ‌های CNR",
+                    subtitle = "سرورهای عمومی",
+                    onClick = onCnr
+                )
             }
+            item(key = "tor") {
+                QuickNavItem(
+                    emoji = "🧅",
+                    title = "شبکه Tor",
+                    subtitle = "اتصال خصوصی",
+                    onClick = onTor
+                )
+            }
+            item(key = "device") {
+                QuickNavItem(
+                    emoji = "📱",
+                    title = "دستگاه",
+                    subtitle = "وضعیت و حریم خصوصی",
+                    onClick = onDevice
+                )
+            }
+            item(key = "settings") {
+                QuickNavItem(
+                    emoji = "⚙️",
+                    title = "تنظیمات",
+                    subtitle = "شخصی‌سازی برنامه",
+                    onClick = onSettings
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuickNavItem(
+    emoji: String,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    val shape = RoundedCornerShape(18.dp)
+    Row(
+        modifier = Modifier
+            .background(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.78f),
+                shape = shape
+            )
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f),
+                shape = shape
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 13.dp, vertical = 12.dp),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Text(text = emoji, style = MaterialTheme.typography.titleLarge)
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
