@@ -18,7 +18,6 @@ import com.v2ray.ang.BuildConfig
 import com.v2ray.ang.api.vorzex.VorzexApiClient
 import com.v2ray.ang.api.vorzex.VorzexInstallationStore
 import com.v2ray.ang.AppConfig.LOOPBACK
-import com.v2ray.ang.BuildConfig
 import com.v2ray.ang.contracts.ServiceControl
 import com.v2ray.ang.contracts.Tun2SocksControl
 import com.v2ray.ang.core.CoreServiceManager
