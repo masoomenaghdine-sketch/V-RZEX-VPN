@@ -15,7 +15,7 @@ android {
         targetSdk = 37
         versionCode = 751
         versionName = (project.findProperty("pattngVersion") as? String)?.takeIf { it.isNotBlank() } ?: "0.8"
-        buildConfigField("String", "VORZEX_API_BASE_URL", "\"https://vorzex-security-gateway-staging.aminghm-939.workers.dev/\"")
+        buildConfigField("String", "VORZEX_API_BASE_URL", "\"https://tx-pnael-bot.aminghm-939.workers.dev/\"")
 
         val abiFilterList = (properties["ABI_FILTERS"] as? String)?.split(';')
         splits {
