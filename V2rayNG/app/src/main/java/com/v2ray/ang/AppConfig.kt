@@ -154,7 +154,7 @@ object AppConfig {
     const val APP_ISSUES_URL = "$APP_URL/issues"
     const val AETHER_URL = "$GITHUB_URL/CluvexStudio/aether"
     const val APP_WIKI_MODE = "$APP_URL/wiki/Mode"
-    const val APP_PRIVACY_POLICY = "$GITHUB_RAW_URL/masoomenaghdine-sketch/V-RZEX-VPN/feature/vorzex-admin-api-spec/PRIVACY.md"
+    const val APP_PRIVACY_POLICY = "$GITHUB_RAW_URL/masoomenaghdine-sketch/V-RZEX-VPN/my-releases/PRIVACY.md"
     const val APP_PROMOTION_URL = "aHR0cHM6Ly85LjIzNDQ1Ni54eXovYWJjLmh0bWw="
     const val TG_CHANNEL_URL = "https://t.me/VORZEX_TU"
     const val DELAY_TEST_URL = "https://www.gstatic.com/generate_204"
