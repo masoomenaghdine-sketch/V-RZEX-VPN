@@ -491,7 +491,9 @@ class CoreVpnService : VpnService(), ServiceControl {
 //        val info = loadVpnNetworkInfo(configName, emptyInfo)!! + (lastNetworkInfo ?: emptyInfo)
 //        saveVpnNetworkInfo(configName, info)
         unlockStart()
+        val wasRunning = isRunning
         isRunning = false
+        if (wasRunning) reportVorzexEvent(ClientEventType.VPN_DISCONNECTED)
 
         tun2SocksService?.stopTun2Socks()
         tun2SocksService = null
