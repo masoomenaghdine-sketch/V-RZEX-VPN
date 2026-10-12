@@ -61,6 +61,8 @@
                 android:value="true" />
         </service>
 
+        <activity android:name=".ui.main.CnrActivity" android:exported="false" />
+
         <activity
             android:name=".ui.main.MainActivity"
             android:theme="@style/VorzexLaunchTheme"
