@@ -79,7 +79,7 @@ class VorzexInstallationStore(context: Context) {
         if (existing != null && existing.matches(Regex("[0-9a-f]{64}"))) return existing
         val bytes = ByteArray(32)
         SecureRandom().nextBytes(bytes)
-        val created = bytes.joinToString("") { "%02x".format(it) }
+        val created = bytes.joinToString("") { "%02x".format(it.toInt() and 0xff) }
         prefs.edit().putString(KEY_API_INSTALLATION_ID, created).apply()
         return created
     }
