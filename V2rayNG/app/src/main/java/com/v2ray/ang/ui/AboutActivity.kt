@@ -7,9 +7,11 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.Image
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -69,6 +71,23 @@ fun AboutScreen(onBackClick: () -> Unit) {
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
         ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                Image(
+                    painter = painterResource(R.drawable.vorzex_icon_foreground),
+                    contentDescription = "VØRZEX VPN",
+                    modifier = Modifier.size(88.dp)
+                )
+                Text(
+                    text = "VØRZEX VPN",
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(top = 10.dp)
+                )
+                Text(
+                    text = "نسخهٔ $versionText",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
+                )
+            }
             SettingsMenuItem(
                 icon = painterResource(R.drawable.license_24px),
                 title = stringResource(R.string.title_oss_license),
