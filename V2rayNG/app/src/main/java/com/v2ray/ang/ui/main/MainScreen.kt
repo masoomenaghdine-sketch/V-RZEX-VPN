@@ -258,6 +258,7 @@ fun MainScreen(
                     loading = publishedConfigsLoading,
                     error = publishedConfigsError,
                     onRefresh = refreshPublishedConfigs,
+                    onDevice = { onNavigate(MainDestination.Device) },
                     onImport = { config -> onAction(MainAction.ImportBatchConfig(config)) }
                 )
                 if (groups.isNotEmpty()) {
@@ -327,6 +328,7 @@ private fun PublishedConfigsPanel(
     loading: Boolean,
     error: Boolean,
     onRefresh: () -> Unit,
+    onDevice: () -> Unit,
     onImport: (String) -> Unit
 ) {
     Card(
@@ -344,8 +346,16 @@ private fun PublishedConfigsPanel(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text("کانفیگ‌های مدیریت VØRZEX", style = androidx.compose.material3.MaterialTheme.typography.titleSmall)
+                Button(onClick = onDevice) {
+                    Text("دستگاه")
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
                 Button(onClick = onRefresh, enabled = !loading) {
-                    Text(if (loading) "..." else "بروزرسانی")
+                    Text(if (loading) "..." else "بروزرسانی کانفیگ‌ها")
                 }
             }
             when {
