@@ -2,6 +2,7 @@ package com.v2ray.ang.service
 
 import android.annotation.SuppressLint
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Network
@@ -10,6 +11,7 @@ import android.net.VpnService
 import android.os.ParcelFileDescriptor
 import android.os.StrictMode
 import com.v2ray.ang.AppConfig
+import com.v2ray.ang.BuildConfig
 import com.v2ray.ang.AppConfig.LOOPBACK
 import com.v2ray.ang.contracts.ServiceControl
 import com.v2ray.ang.contracts.Tun2SocksControl
@@ -136,8 +138,8 @@ class CoreVpnService : VpnService(), ServiceControl {
         return super<VpnService>.setUnderlyingNetworks(networks)
     }
 
-    override fun attachBaseContext(newBase: Context?) {
-        val context = newBase?.let(AppLocaleManager::localizedContext)
+    override fun attachBaseContext(newBase: Context) {
+        val context = AppLocaleManager.localizedContext(newBase)
         super.attachBaseContext(context)
     }
 
