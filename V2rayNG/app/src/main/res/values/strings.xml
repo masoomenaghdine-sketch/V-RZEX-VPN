@@ -5,7 +5,7 @@
     <string name="device_title">Device</string>
 <string name="cnr_title">CNR · Free Configs</string>
 <string name="app_name" translatable="false">VØRZEX VPN</string>
-    <string name="tor_network_title">CNR</string>
+    <string name="tor_network_title">Tor Network</string>
     <string name="tor_profile_name">Tor · VØRZEX</string>
     <string name="app_widget_name">Switch</string>
     <string name="app_tile_name">Switch</string>
