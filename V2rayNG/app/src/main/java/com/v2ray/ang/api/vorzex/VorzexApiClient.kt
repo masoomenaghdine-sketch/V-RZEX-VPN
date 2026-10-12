@@ -114,12 +114,24 @@ class VorzexApiClient(
         requiresToken = true
     )
 
-    suspend fun sendEvent(request: ClientEventRequest): Unit = post(
-        path = "v1/telemetry/events",
-        payload = request,
-        responseType = Unit::class.java,
-        requiresToken = true
-    )
+    suspend fun sendEvent(request: ClientEventRequest): Unit {
+        return try {
+            post(
+                path = "v1/telemetry/events",
+                payload = request,
+                responseType = Unit::class.java,
+                requiresToken = true
+            )
+        } catch (error: IOException) {
+            if (error.message?.contains("HTTP 401") != true || !refreshAccessToken()) throw error
+            post(
+                path = "v1/telemetry/events",
+                payload = request,
+                responseType = Unit::class.java,
+                requiresToken = true
+            )
+        }
+    }
 
     suspend fun getAccessStatus(): ClientAccessStatusResponse = get(
         path = "v1/client/access-status",
