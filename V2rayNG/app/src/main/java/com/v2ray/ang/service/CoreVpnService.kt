@@ -69,7 +69,12 @@ class CoreVpnService : VpnService(), ServiceControl {
             val store = VorzexInstallationStore(this@CoreVpnService)
             val client = VorzexApiClient(
                 baseUrl = BuildConfig.VORZEX_API_BASE_URL,
-                installationTokenProvider = { store.token() }
+                installationTokenProvider = { store.token() },
+                refreshTokenProvider = { store.refreshToken() },
+                tokenSaver = { access, refresh ->
+                    store.saveToken(access)
+                    if (!refresh.isNullOrBlank()) store.saveRefreshToken(refresh)
+                }
             )
             while (isActive) {
                 try {
