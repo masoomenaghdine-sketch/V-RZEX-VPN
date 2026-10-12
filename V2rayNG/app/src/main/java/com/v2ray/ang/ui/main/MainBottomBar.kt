@@ -87,12 +87,11 @@ fun MainBottomBar(
                     modifier = Modifier.size(22.dp),
                     tint = Color.White
                 )
-                Box(modifier = Modifier.padding(start = 10.dp)) {
-                    Text(
-                        text = if (isRunning) "قطع اتصال" else "اتصال VPN",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
+                Text(
+                    text = if (isRunning) "قطع اتصال" else "اتصال VPN",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(start = 10.dp)
+                )
             }
         }
     }
