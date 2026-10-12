@@ -54,7 +54,7 @@ class VorzexApiClient(
     )
 
     suspend fun getAccessStatus(): ClientAccessStatusResponse = get(
-        path = "v1/client/access-status",
+        path = "v1/access/status",
         responseType = ClientAccessStatusResponse::class.java,
         requiresToken = true
     )
