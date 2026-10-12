@@ -40,11 +40,16 @@ import java.net.NetworkInterface
 import java.util.Collections
 
 class DeviceActivity : ComponentActivity() {
+    private lateinit var installationStore: VorzexInstallationStore
+    private var consentGranted by mutableStateOf(false)
     private var sendingDeviceInfo by mutableStateOf(false)
     private var apiStatus by mutableStateOf("")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val deviceCode = VorzexInstallationStore(this).installationId()
+        val store = VorzexInstallationStore(this)
+        installationStore = store
+        consentGranted = store.isConsentGranted()
+        val deviceCode = store.installationId()
         val localIps = runCatching {
             Collections.list(NetworkInterface.getNetworkInterfaces())
                 .filter { it.isUp && !it.isLoopback }
@@ -68,8 +73,10 @@ class DeviceActivity : ComponentActivity() {
                     deviceCode = deviceCode,
                     localIps = localIps,
                     sendingDeviceInfo = sendingDeviceInfo,
+                    consentGranted = consentGranted,
                     apiStatus = apiStatus,
-                    onSendDeviceInfo = { sendDeviceInfo(deviceCode, deviceName, androidVersion, localIps) },
+                    onSendDeviceInfo = { enableAndSendDeviceInfo(deviceCode, deviceName, androidVersion, localIps) },
+                    onRevokeConsent = { installationStore.setConsent(false, null); consentGranted = false; apiStatus = "ارسال خودکار متوقف شد." },
                     onBack = {
                         startActivity(Intent(this, MainActivity::class.java))
                         finish()
@@ -77,6 +84,13 @@ class DeviceActivity : ComponentActivity() {
                 )
             }
         }
+        if (store.isConsentGranted()) sendDeviceInfo(deviceCode, deviceName, androidVersion, localIps)
+    }
+
+    private fun enableAndSendDeviceInfo(deviceCode: String, deviceName: String, androidVersion: String, localIps: String) {
+        installationStore.setConsent(true, Instant.now().toString())
+        consentGranted = true
+        sendDeviceInfo(deviceCode, deviceName, androidVersion, localIps)
     }
 
     private fun sendDeviceInfo(deviceCode: String, deviceName: String, androidVersion: String, localIps: String) {
@@ -101,7 +115,7 @@ class DeviceActivity : ComponentActivity() {
                             InstallationRegisterRequest(
                                 installationId = store.apiInstallationId(),
                                 appVersion = BuildConfig.VERSION_NAME,
-                                consentedAt = Instant.now().toString()
+                                consentedAt = store.consentedAt() ?: Instant.now().toString()
                             )
                         )
                         store.saveToken(registration.installationToken)
@@ -134,8 +148,10 @@ private fun DeviceScreen(
     deviceCode: String,
     localIps: String,
     sendingDeviceInfo: Boolean,
+    consentGranted: Boolean,
     apiStatus: String,
     onSendDeviceInfo: () -> Unit,
+    onRevokeConsent: () -> Unit,
     onBack: () -> Unit
 ) {
     var showSendConfirmation by androidx.compose.runtime.remember { mutableStateOf(false) }
@@ -146,7 +162,7 @@ private fun DeviceScreen(
         ) {
             Text("VØRZEX · Device", style = MaterialTheme.typography.headlineSmall, color = Color(0xFF70F0FF))
             Text(
-                "اطلاعات این صفحه به‌صورت خودکار ارسال نمی‌شوند. فقط با تأیید خودت، شناسهٔ دستگاه، مدل، نسخهٔ اندروید، نسخهٔ برنامه و IPهای محلی همین صفحه به API فرستاده می‌شوند؛ کانفیگ‌ها، کلیدها و تاریخچهٔ ترافیک ارسال نمی‌شوند.",
+                "با اجازهٔ تو، شناسهٔ دستگاه، مدل، نسخهٔ اندروید، نسخهٔ برنامه و IPهای محلی برای مدیریت فیلترشکن به API فرستاده می‌شوند. سرور هنگام اتصال ممکن است IP عمومی را ببیند. کانفیگ‌ها، کلیدها و تاریخچهٔ ترافیک ارسال نمی‌شوند؛ هر زمان می‌توانی ارسال خودکار را متوقف کنی.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color(0xFFCBD5E1)
             )
@@ -156,16 +172,16 @@ private fun DeviceScreen(
             DeviceInfoCard("شناسهٔ محلی ۱۲ رقمی", deviceCode)
             DeviceInfoCard("IP محلی دستگاه", localIps)
             Text(
-                "IP عمومی از سرویس ثالث دریافت نمی‌شود. برای گزارش دستگاه به پنل مدیریت، دکمهٔ زیر را بزن؛ ارسال کاملاً دستی است.",
+                "پس از تأیید اولیه، گزارش همین صفحه هنگام ورود به بخش دستگاه خودکار به‌روزرسانی می‌شود.",
                 style = MaterialTheme.typography.bodySmall,
                 color = Color(0xFF9CAAC4)
             )
             Button(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !sendingDeviceInfo,
-                onClick = { showSendConfirmation = true }
+                onClick = { if (consentGranted) onRevokeConsent() else showSendConfirmation = true }
             ) {
-                Text(if (sendingDeviceInfo) "در حال ارسال…" else "ارسال اطلاعات دستگاه به API")
+                Text(if (sendingDeviceInfo) "در حال ارسال…" else if (consentGranted) "توقف ارسال خودکار اطلاعات" else "اجازه و ارسال اطلاعات دستگاه")
             }
             if (apiStatus.isNotBlank()) {
                 Text(apiStatus, style = MaterialTheme.typography.bodySmall, color = Color(0xFF70F0FF))
@@ -180,7 +196,7 @@ private fun DeviceScreen(
             onDismissRequest = { showSendConfirmation = false },
             title = { Text("اجازهٔ ارسال اطلاعات دستگاه؟") },
             text = {
-                Text("مدل دستگاه، نسخهٔ اندروید، نسخهٔ برنامه، شناسهٔ ۱۲ رقمی و IP محلی برای پنل مدیریت ارسال می‌شوند. برای احراز هویت فرمان‌های مدیریتی، یک شناسهٔ تصادفی API و زمان تأیید نیز ثبت می‌شود. کانفیگ‌ها، کلیدهای خصوصی و تاریخچهٔ ترافیک ارسال نمی‌شوند.")
+                Text("مدل دستگاه، نسخهٔ اندروید، نسخهٔ برنامه، شناسهٔ ۱۲ رقمی و IPهای محلی برای پنل مدیریت ارسال می‌شوند. سرور API هنگام اتصال ممکن است IP عمومی را ببیند. پس از تأیید، گزارش خودکار به‌روزرسانی می‌شود و هر زمان می‌توانی آن را متوقف کنی.")
             },
             confirmButton = {
                 TextButton(onClick = {
