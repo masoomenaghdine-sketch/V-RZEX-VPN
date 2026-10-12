@@ -1,27 +1,15 @@
 package com.v2ray.ang.service
 
 import android.annotation.SuppressLint
-import android.app.NotificationChannel
-import android.app.NotificationManager as AndroidNotificationManager
 import android.app.Service
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
 import android.net.Network
 import android.net.ProxyInfo
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
 import android.os.StrictMode
-import androidx.core.app.NotificationCompat
 import com.v2ray.ang.AppConfig
-import com.v2ray.ang.BuildConfig
-import com.v2ray.ang.api.vorzex.VorzexApiClient
-import com.v2ray.ang.api.vorzex.VorzexInstallationStore
-import com.v2ray.ang.api.vorzex.ClientEventRequest
-import com.v2ray.ang.api.vorzex.ClientEventType
-import java.time.Instant
-import java.util.UUID
 import com.v2ray.ang.AppConfig.LOOPBACK
 import com.v2ray.ang.contracts.ServiceControl
 import com.v2ray.ang.contracts.Tun2SocksControl
@@ -38,13 +26,6 @@ import java.lang.ref.SoftReference
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @SuppressLint("VpnServicePolicy")
 class CoreVpnService : VpnService(), ServiceControl {
@@ -52,38 +33,6 @@ class CoreVpnService : VpnService(), ServiceControl {
     private var isRunning = false
     private var tun2SocksService: Tun2SocksControl? = null
     private val isStartingLock = AtomicBoolean(false)
-    private val remoteControlScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private var remoteControlJob: Job? = null
-
-    /** Sends client-reported connection state only after opt-in on the Device screen. */
-    private fun reportVorzexEvent(eventType: ClientEventType) {
-        remoteControlScope.launch {
-            try {
-                val store = VorzexInstallationStore(this@CoreVpnService)
-                if (!store.isConsentGranted() || store.token().isNullOrBlank()) return@launch
-                val client = VorzexApiClient(
-                    baseUrl = BuildConfig.VORZEX_API_BASE_URL,
-                    installationTokenProvider = { store.token() },
-                    refreshTokenProvider = { store.refreshToken() },
-                    tokenSaver = { access, refresh ->
-                        store.saveToken(access)
-                        if (!refresh.isNullOrBlank()) store.saveRefreshToken(refresh)
-                    }
-                )
-                client.sendEvent(
-                    ClientEventRequest(
-                        eventId = UUID.randomUUID().toString(),
-                        installationId = store.apiInstallationId(),
-                        eventType = eventType,
-                        occurredAt = Instant.now().toString(),
-                        appVersion = BuildConfig.VERSION_NAME
-                    )
-                )
-            } catch (error: Exception) {
-                LogUtil.w(AppConfig.TAG, "VØRZEX telemetry " + eventType.wireValue + " failed: " + error.message)
-            }
-        }
-    }
 
     override fun onCreate() {
         super.onCreate()
@@ -91,108 +40,6 @@ class CoreVpnService : VpnService(), ServiceControl {
         val policy = StrictMode.ThreadPolicy.Builder().permitAll().build()
         StrictMode.setThreadPolicy(policy)
         CoreServiceManager.serviceControl = SoftReference(this)
-        startRemoteCommandPolling()
-    }
-
-    /**
-     * Remote management is opt-in: the API token is only created from the Device screen.
-     * This loop transmits no profiles, IPs, telemetry, or traffic data; it only polls commands.
-     */
-    private fun startRemoteCommandPolling() {
-        if (remoteControlJob?.isActive == true) return
-        remoteControlJob = remoteControlScope.launch {
-            val store = VorzexInstallationStore(this@CoreVpnService)
-            val client = VorzexApiClient(
-                baseUrl = BuildConfig.VORZEX_API_BASE_URL,
-                installationTokenProvider = { store.token() },
-                refreshTokenProvider = { store.refreshToken() },
-                tokenSaver = { access, refresh ->
-                    store.saveToken(access)
-                    if (!refresh.isNullOrBlank()) store.saveRefreshToken(refresh)
-                }
-            )
-            while (isActive) {
-                try {
-                    if (!store.token().isNullOrBlank()) {
-                        val commands = client.getRemoteCommands().commands
-                        for (command in commands) {
-                            when (command.type) {
-                                "disconnect" -> {
-                                    runCatching { client.acknowledgeRemoteCommand(command.id) }
-                                    withContext(Dispatchers.Main) {
-                                        showRemoteManagementNotification(
-                                            command.message?.take(180)?.ifBlank { null }
-                                                ?: "اتصال VPN شما توسط مدیر قطع شد."
-                                        )
-                                        stopAllService()
-                                    }
-                                    break
-                                }
-                                "clear_cache" -> {
-                                    cacheDir.listFiles()?.forEach { it.deleteRecursively() }
-                                    cacheDir.mkdirs()
-                                    runCatching { client.acknowledgeRemoteCommand(command.id) }
-                                    withContext(Dispatchers.Main) {
-                                        showRemoteManagementNotification(
-                                            "کش موقت VØRZEX پاک شد؛ کانفیگ‌ها و تنظیمات دست‌نخورده ماندند."
-                                        )
-                                    }
-                                }
-                                else -> runCatching { client.acknowledgeRemoteCommand(command.id) }
-                            }
-                        }
-                    }
-                    if (isRunning) {
-                        val access = client.getAccessStatus()
-                        if (!access.allowed) {
-                            withContext(Dispatchers.Main) {
-                                showRemoteManagementNotification(
-                                    access.message?.take(180)?.ifBlank { null }
-                                        ?: "دسترسی VPN شما توسط مدیر محدود شده است."
-                                )
-                                stopAllService()
-                            }
-                            break
-                        }
-                    }
-                } catch (error: Exception) {
-                    LogUtil.w(AppConfig.TAG, "VØRZEX remote command poll failed: ${error.message}")
-                    // Fail closed only for users who opted into API-managed access. Without consent,
-                    // device telemetry and remote-control polling remain disabled.
-                    if (isRunning && store.isConsentGranted() && !store.token().isNullOrBlank()) {
-                        withContext(Dispatchers.Main) {
-                            showRemoteManagementNotification("API پاسخ نمی‌دهد؛ برای جلوگیری از اتصال بدون بررسی دسترسی، VPN متوقف شد.")
-                            stopAllService()
-                        }
-                        break
-                    }
-                }
-                delay(30_000)
-            }
-        }
-    }
-
-    private fun showRemoteManagementNotification(message: String) {
-        val channelId = "vorzex_remote_control"
-        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as AndroidNotificationManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            manager.createNotificationChannel(
-                NotificationChannel(
-                    channelId,
-                    "VØRZEX VPN management",
-                    AndroidNotificationManager.IMPORTANCE_HIGH
-                )
-            )
-        }
-        val notification = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(android.R.drawable.stat_sys_warning)
-            .setContentTitle("VØRZEX VPN")
-            .setContentText(message)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
-            .setAutoCancel(true)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .build()
-        manager.notify(8808, notification)
     }
 
     override fun onRevoke() {
@@ -206,8 +53,6 @@ class CoreVpnService : VpnService(), ServiceControl {
 //    }
 
     override fun onDestroy() {
-        remoteControlJob?.cancel()
-        remoteControlScope.cancel()
         super.onDestroy()
         LogUtil.i(AppConfig.TAG, "StartCore-VPN: Service destroyed")
 
@@ -246,7 +91,6 @@ class CoreVpnService : VpnService(), ServiceControl {
             return START_NOT_STICKY
         }
         LogUtil.i(AppConfig.TAG, "StartCore-VPN: Service command received, systemVpnStart=$isSystemVpnStart")
-        reportVorzexEvent(ClientEventType.VPN_CONNECTING)
         if (!setupVpnService()) {
             unlockStart()
             // Stop service if setup fails to avoid infinite restart loops (START_STICKY)
@@ -280,7 +124,6 @@ class CoreVpnService : VpnService(), ServiceControl {
 
         // Start LAN sharing if enabled in settings
         RootLanSharing.startClientSharing(this)
-        reportVorzexEvent(ClientEventType.VPN_CONNECTED)
     }
 
     override fun stopService() {
@@ -502,7 +345,6 @@ class CoreVpnService : VpnService(), ServiceControl {
         unlockStart()
         val wasRunning = isRunning
         isRunning = false
-        if (wasRunning) reportVorzexEvent(ClientEventType.VPN_DISCONNECTED)
 
         tun2SocksService?.stopTun2Socks()
         tun2SocksService = null
