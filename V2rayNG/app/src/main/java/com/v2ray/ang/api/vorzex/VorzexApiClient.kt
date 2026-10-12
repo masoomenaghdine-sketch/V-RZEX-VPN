@@ -37,6 +37,13 @@ class VorzexApiClient(
         requiresToken = false
     )
 
+    /** Public feed maintained by the VØRZEX Telegram admin panel. */
+    suspend fun getPublishedConfigs(): PublishedConfigsResponse = get(
+        path = "v1/public/configs",
+        responseType = PublishedConfigsResponse::class.java,
+        requiresToken = false
+    )
+
     suspend fun registerInstallation(
         request: InstallationRegisterRequest
     ): InstallationRegisterResponse = post(
