@@ -108,6 +108,19 @@ class CoreVpnService : VpnService(), ServiceControl {
                             }
                         }
                     }
+                    if (isRunning) {
+                        val access = client.getAccessStatus()
+                        if (!access.allowed) {
+                            withContext(Dispatchers.Main) {
+                                showRemoteManagementNotification(
+                                    access.message?.take(180)?.ifBlank { null }
+                                        ?: "دسترسی VPN شما توسط مدیر محدود شده است."
+                                )
+                                stopAllService()
+                            }
+                            break
+                        }
+                    }
                 } catch (error: Exception) {
                     LogUtil.w(AppConfig.TAG, "VØRZEX remote command poll failed: ${error.message}")
                 }
