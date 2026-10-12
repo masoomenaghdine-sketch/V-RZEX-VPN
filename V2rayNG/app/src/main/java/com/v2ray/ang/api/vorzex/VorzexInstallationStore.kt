@@ -17,6 +17,18 @@ class VorzexInstallationStore(context: Context) {
         Context.MODE_PRIVATE
     )
 
+    init {
+        // One-time privacy cleanup for values stored by older API-enabled builds.
+        prefs.edit()
+            .remove("installation_token")
+            .remove("refresh_token")
+            .remove("api_installation_id")
+            .remove("consent_granted")
+            .remove("consent_decided")
+            .remove("consented_at")
+            .apply()
+    }
+
     fun installationId(): String {
         val existing = prefs.getString(KEY_INSTALLATION_ID, null)
         if (existing != null && existing.matches(Regex("\\d{12}"))) return existing
