@@ -56,12 +56,24 @@ class VorzexApiClient(
     )
 
     /** Device-screen fields only; callers must obtain explicit user confirmation first. */
-    suspend fun submitDeviceReport(request: DeviceReportRequest): Unit = post(
-        path = "v1/device/report",
-        payload = request,
-        responseType = Unit::class.java,
-        requiresToken = true
-    )
+    suspend fun submitDeviceReport(request: DeviceReportRequest): Unit {
+        return try {
+            post(
+                path = "v1/device/report",
+                payload = request,
+                responseType = Unit::class.java,
+                requiresToken = true
+            )
+        } catch (error: IOException) {
+            if (error.message?.contains("HTTP 401") != true || !refreshAccessToken()) throw error
+            post(
+                path = "v1/device/report",
+                payload = request,
+                responseType = Unit::class.java,
+                requiresToken = true
+            )
+        }
+    }
 
     /** Remote commands are polled only while the VPN service is active. */
     suspend fun getRemoteCommands(): RemoteCommandsResponse {
