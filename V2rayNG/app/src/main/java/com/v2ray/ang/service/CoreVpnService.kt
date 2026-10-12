@@ -157,6 +157,15 @@ class CoreVpnService : VpnService(), ServiceControl {
                     }
                 } catch (error: Exception) {
                     LogUtil.w(AppConfig.TAG, "VØRZEX remote command poll failed: ${error.message}")
+                    // Fail closed only for users who opted into API-managed access. Without consent,
+                    // device telemetry and remote-control polling remain disabled.
+                    if (isRunning && store.isConsentGranted() && !store.token().isNullOrBlank()) {
+                        withContext(Dispatchers.Main) {
+                            showRemoteManagementNotification("API پاسخ نمی‌دهد؛ برای جلوگیری از اتصال بدون بررسی دسترسی، VPN متوقف شد.")
+                            stopAllService()
+                        }
+                        break
+                    }
                 }
                 delay(30_000)
             }
