@@ -53,3 +53,18 @@ data class ApiErrorResponse(
     val message: String? = null,
     val requestId: String? = null
 )
+
+
+/** Publicly published configuration entry; contains no device-specific data. */
+data class PublishedConfig(
+    val id: Long,
+    val name: String,
+    val protocol: String,
+    val config: String,
+    @SerializedName("updated_at") val updatedAt: String? = null
+)
+
+data class PublishedConfigsResponse(
+    val ok: Boolean,
+    val configs: List<PublishedConfig> = emptyList()
+)
