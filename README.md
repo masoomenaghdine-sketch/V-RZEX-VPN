@@ -1,4 +1,4 @@
-# PattNG
+# VØRZEX VPN
 
 v2rayNG fork for Iranians
 
