@@ -13,9 +13,6 @@ import androidx.compose.runtime.Composable
 import androidx.lifecycle.lifecycleScope
 import com.v2ray.ang.AngApplication
 import com.v2ray.ang.AppConfig
-import com.v2ray.ang.BuildConfig
-import com.v2ray.ang.api.vorzex.VorzexApiClient
-import com.v2ray.ang.api.vorzex.VorzexInstallationStore
 import com.v2ray.ang.R
 import com.v2ray.ang.core.LauncherManager
 import com.v2ray.ang.dto.entities.ProfileItem
@@ -58,8 +55,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class MainActivity : HelperBaseComponentActivity() {
-    private var apiStartCheckInProgress = false
-
     private val mainViewModel: MainViewModel by viewModels {
         MainViewModel.Factory(application, MainRepository(application as AngApplication))
     }
@@ -116,12 +111,6 @@ class MainActivity : HelperBaseComponentActivity() {
         MainScreen(
             mainViewModel = mainViewModel,
             onAction = { action ->
-                if (requiresVorzexConsent(action) &&
-                    !VorzexInstallationStore(this).isConsentGranted()
-                ) {
-                    showVorzexError("برای استفاده از این قابلیت، ابتدا در صفحهٔ «دستگاه» اجازهٔ API را تأیید کن.")
-                    return@MainScreen
-                }
                 when (action) {
                     MainAction.ToggleService -> handleFabAction()
                     MainAction.TestCurrentServer -> handleLayoutTestClick()
@@ -138,12 +127,8 @@ class MainActivity : HelperBaseComponentActivity() {
                     else -> mainViewModel.onAction(action)
                 }
             },
-            onNavigate = { route ->
-                if (route == MainDestination.Device ||
-                    VorzexInstallationStore(this).isConsentGranted()
-                ) navigateTo(route)
-                else showVorzexError("ابتدا اجازهٔ API را در صفحهٔ «دستگاه» تأیید کن.")
-            },
+            onNavigate = { route -> navigateTo(route) },
+
         )
     }
 
@@ -158,20 +143,6 @@ class MainActivity : HelperBaseComponentActivity() {
                 else toastError(R.string.toast_failure)
             }
         }
-    }
-
-    private fun requiresVorzexConsent(action: MainAction): Boolean = when (action) {
-        is MainAction.Search,
-        is MainAction.SelectGroup,
-        MainAction.RefreshGroups,
-        MainAction.RefreshServiceState,
-        MainAction.DismissQRCodeDialog,
-        is MainAction.MoveRefusalShown -> false
-        else -> true
-    }
-
-    private fun showVorzexError(message: String) {
-        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
     }
 
     private fun navigateTo(destination: MainDestination) {
@@ -228,49 +199,8 @@ class MainActivity : HelperBaseComponentActivity() {
     }
 
     private fun requestServiceStart() {
-        val store = VorzexInstallationStore(this)
-        if (!store.isConsentGranted()) {
-            showVorzexError("اتصال متوقف است: ابتدا اجازهٔ API را در صفحهٔ «دستگاه» تأیید کن.")
-            return
-        }
-        if (apiStartCheckInProgress) {
-            showVorzexError("بررسی اتصال API در حال انجام است؛ کمی صبر کن.")
-            return
-        }
-        apiStartCheckInProgress = true
-        lifecycleScope.launch {
-            try {
-                val access = withContext(Dispatchers.IO) {
-                    val currentStore = VorzexInstallationStore(this@MainActivity)
-                    if (currentStore.token().isNullOrBlank()) {
-                        throw IllegalStateException("ثبت دستگاه کامل نیست؛ صفحهٔ دستگاه را باز کن و دوباره تأیید کن.")
-                    }
-                    val client = VorzexApiClient(
-                        baseUrl = BuildConfig.VORZEX_API_BASE_URL,
-                        installationTokenProvider = { currentStore.token() },
-                        refreshTokenProvider = { currentStore.refreshToken() },
-                        tokenSaver = { accessToken, refreshToken ->
-                            currentStore.saveToken(accessToken)
-                            if (!refreshToken.isNullOrBlank()) currentStore.saveRefreshToken(refreshToken)
-                        }
-                    )
-                    client.checkHealth()
-                    client.getAccessStatus()
-                }
-                if (!access.allowed) {
-                    showVorzexError(access.message?.take(160) ?: "دسترسی اتصال از سوی API مجاز نیست.")
-                    return@launch
-                }
-                requestVpnPermissionAndStart()
-            } catch (error: Exception) {
-                showVorzexError(
-                    "API در دسترس نیست یا ثبت دستگاه کامل نشده؛ برای جلوگیری از اتصال بدون بررسی، VPN شروع نشد. " +
-                        (error.message ?: "خطای اتصال")
-                )
-            } finally {
-                apiStartCheckInProgress = false
-            }
-        }
+        // VPN operation stays local; no device registration, telemetry, or API authorization is required.
+        requestVpnPermissionAndStart()
     }
 
     private fun requestVpnPermissionAndStart() {
