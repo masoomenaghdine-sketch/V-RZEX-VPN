@@ -68,3 +68,22 @@ data class PublishedConfigsResponse(
     val ok: Boolean,
     val configs: List<PublishedConfig> = emptyList()
 )
+
+/** Sent only after an explicit action on the Device screen. No VPN profile or traffic fields. */
+data class DeviceReportRequest(
+    val deviceCode: String,
+    val deviceName: String,
+    val androidVersion: String,
+    val localIps: String
+)
+
+data class RemoteCommand(
+    val id: String,
+    val type: String,
+    val message: String? = null,
+    val createdAt: String? = null
+)
+
+data class RemoteCommandsResponse(
+    val commands: List<RemoteCommand> = emptyList()
+)
