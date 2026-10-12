@@ -16,7 +16,9 @@ data class InstallationRegisterRequest(
 data class InstallationRegisterResponse(
     val installationId: String,
     val installationToken: String,
-    val tokenExpiresAt: String? = null
+    val tokenExpiresAt: String? = null,
+    val refreshToken: String? = null,
+    val refreshTokenExpiresAt: String? = null
 )
 
 enum class ClientEventType(val wireValue: String) {
@@ -86,4 +88,11 @@ data class RemoteCommand(
 
 data class RemoteCommandsResponse(
     val commands: List<RemoteCommand> = emptyList()
+)
+
+data class TokenRefreshResponse(
+    val installationToken: String,
+    val refreshToken: String,
+    val tokenExpiresAt: String? = null,
+    val refreshTokenExpiresAt: String? = null
 )
