@@ -49,8 +49,7 @@ private val primaryDrawerItems = listOf(
     MainDestination.PerAppProxy,
     MainDestination.Routing,
     MainDestination.UserAssets,
-    MainDestination.Settings,
-    MainDestination.TorNetwork
+    MainDestination.Settings
 )
 
 private val drawerItems = primaryDrawerItems + listOf(
