@@ -200,7 +200,7 @@ jobs:
           ./gradlew assembleRelease -PpattngVersion="${{ inputs.release_tag }}" -Pandroid.injected.signing.store.file=${{ steps.android_keystore.outputs.filePath }} -Pandroid.injected.signing.store.password=${{ secrets.APP_KEYSTORE_PASSWORD }} -Pandroid.injected.signing.key.alias=${{ secrets.APP_KEYSTORE_ALIAS }} -Pandroid.injected.signing.key.password=${{ secrets.APP_KEY_PASSWORD }}
         else
           # Pushes and pull requests build installable debug APKs without release secrets.
-          ./gradlew assemblePlaystoreDebug assembleFdroidDebug
+          ./gradlew assemblePlaystoreDebug assembleFdroidDebug -PABI_FILTERS=arm64-v8a
         fi
     
     - name: Check the native libraries in the APKs
