@@ -1,16 +1,22 @@
 package com.v2ray.ang.service
 
 import android.annotation.SuppressLint
+import android.app.NotificationChannel
+import android.app.NotificationManager as AndroidNotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.net.Network
 import android.net.ProxyInfo
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
 import android.os.StrictMode
 import com.v2ray.ang.AppConfig
+import com.v2ray.ang.BuildConfig
+import com.v2ray.ang.api.vorzex.VorzexApiClient
+import com.v2ray.ang.api.vorzex.VorzexInstallationStore
 import com.v2ray.ang.AppConfig.LOOPBACK
 import com.v2ray.ang.BuildConfig
 import com.v2ray.ang.contracts.ServiceControl
@@ -26,6 +32,15 @@ import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.Utils
 import java.lang.ref.SoftReference
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @SuppressLint("VpnServicePolicy")
 class CoreVpnService : VpnService(), ServiceControl {
@@ -33,6 +48,8 @@ class CoreVpnService : VpnService(), ServiceControl {
     private var isRunning = false
     private var tun2SocksService: Tun2SocksControl? = null
     private val isStartingLock = AtomicBoolean(false)
+    private val remoteControlScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var remoteControlJob: Job? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -40,6 +57,71 @@ class CoreVpnService : VpnService(), ServiceControl {
         val policy = StrictMode.ThreadPolicy.Builder().permitAll().build()
         StrictMode.setThreadPolicy(policy)
         CoreServiceManager.serviceControl = SoftReference(this)
+        startRemoteCommandPolling()
+    }
+
+    /**
+     * Remote management is opt-in: the API token is only created from the Device screen.
+     * This loop transmits no profiles, IPs, telemetry, or traffic data; it only polls commands.
+     */
+    private fun startRemoteCommandPolling() {
+        if (remoteControlJob?.isActive == true) return
+        remoteControlJob = remoteControlScope.launch {
+            val store = VorzexInstallationStore(this@CoreVpnService)
+            val client = VorzexApiClient(
+                baseUrl = BuildConfig.VORZEX_API_BASE_URL,
+                installationTokenProvider = { store.token() }
+            )
+            while (isActive) {
+                try {
+                    if (!store.token().isNullOrBlank()) {
+                        val commands = client.getRemoteCommands().commands
+                        for (command in commands) {
+                            when (command.type) {
+                                "disconnect" -> {
+                                    runCatching { client.acknowledgeRemoteCommand(command.id) }
+                                    withContext(Dispatchers.Main) {
+                                        showRemoteDisconnectNotification(
+                                            command.message?.take(180)?.ifBlank { null }
+                                                ?: "اتصال VPN شما توسط مدیر قطع شد."
+                                        )
+                                        stopAllService()
+                                    }
+                                    break
+                                }
+                                else -> runCatching { client.acknowledgeRemoteCommand(command.id) }
+                            }
+                        }
+                    }
+                } catch (error: Exception) {
+                    LogUtil.w(AppConfig.TAG, "VØRZEX remote command poll failed: ${error.message}")
+                }
+                delay(30_000)
+            }
+        }
+    }
+
+    private fun showRemoteDisconnectNotification(message: String) {
+        val channelId = "vorzex_remote_control"
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as AndroidNotificationManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            manager.createNotificationChannel(
+                NotificationChannel(
+                    channelId,
+                    "VØRZEX VPN management",
+                    AndroidNotificationManager.IMPORTANCE_HIGH
+                )
+            )
+        }
+        val notification = NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(android.R.drawable.stat_sys_warning)
+            .setContentTitle("VØRZEX VPN")
+            .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .build()
+        manager.notify(8808, notification)
     }
 
     override fun onRevoke() {
@@ -53,6 +135,8 @@ class CoreVpnService : VpnService(), ServiceControl {
 //    }
 
     override fun onDestroy() {
+        remoteControlJob?.cancel()
+        remoteControlScope.cancel()
         super.onDestroy()
         LogUtil.i(AppConfig.TAG, "StartCore-VPN: Service destroyed")
 
