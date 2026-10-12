@@ -24,6 +24,8 @@ import java.util.concurrent.TimeUnit
 class VorzexApiClient(
     baseUrl: String,
     private val installationTokenProvider: () -> String? = { null },
+    private val refreshTokenProvider: () -> String? = { null },
+    private val tokenSaver: (String, String?) -> Unit = { _, _ -> },
     private val httpClient: OkHttpClient = defaultHttpClient(),
     private val gson: Gson = Gson()
 ) {
@@ -62,11 +64,36 @@ class VorzexApiClient(
     )
 
     /** Remote commands are polled only while the VPN service is active. */
-    suspend fun getRemoteCommands(): RemoteCommandsResponse = get(
-        path = "v1/client/commands",
-        responseType = RemoteCommandsResponse::class.java,
-        requiresToken = true
-    )
+    suspend fun getRemoteCommands(): RemoteCommandsResponse {
+        return try {
+            get(
+                path = "v1/client/commands",
+                responseType = RemoteCommandsResponse::class.java,
+                requiresToken = true
+            )
+        } catch (error: IOException) {
+            if (error.message?.contains("HTTP 401") != true || !refreshAccessToken()) throw error
+            get(
+                path = "v1/client/commands",
+                responseType = RemoteCommandsResponse::class.java,
+                requiresToken = true
+            )
+        }
+    }
+
+    private suspend fun refreshAccessToken(): Boolean {
+        val refresh = refreshTokenProvider()?.trim().orEmpty()
+        if (refresh.isBlank()) return false
+        return runCatching {
+            val response = post(
+                path = "v1/auth/refresh",
+                payload = mapOf("refreshToken" to refresh),
+                responseType = TokenRefreshResponse::class.java,
+                requiresToken = false
+            )
+            tokenSaver(response.installationToken, response.refreshToken)
+        }.isSuccess
+    }
 
     suspend fun acknowledgeRemoteCommand(commandId: String): Unit = post(
         path = "v1/client/commands/${commandId}/ack",
