@@ -1,6 +1,7 @@
 package com.v2ray.ang.ui.main
 
 import android.content.Intent
+import androidx.appcompat.app.AlertDialog
 import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
@@ -15,6 +16,8 @@ import com.v2ray.ang.AppConfig
 import com.v2ray.ang.BuildConfig
 import com.v2ray.ang.R
 import com.v2ray.ang.core.LauncherManager
+import com.v2ray.ang.api.vorzex.InstallationRegisterRequest
+import com.v2ray.ang.api.vorzex.VorzexInstallationStore
 import com.v2ray.ang.api.vorzex.VorzexApiClient
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.enums.EConfigType
@@ -54,6 +57,7 @@ import com.v2ray.ang.util.Utils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.Instant
 
 class MainActivity : HelperBaseComponentActivity() {
     private val mainViewModel: MainViewModel by viewModels {
@@ -96,20 +100,70 @@ class MainActivity : HelperBaseComponentActivity() {
         setTheme(R.style.AppThemeDayNight_NoActionBar)
         super.onCreate(savedInstanceState)
         mainViewModel.onAction(MainAction.Initialize)
-        checkVorzexApiHealth()
+        initializeVorzexApi()
 
         checkAndRequestPermission(PermissionType.POST_NOTIFICATIONS) {}
     }
 
-    /** Checks only the backend health endpoint. No device ID, profile, or connection data is uploaded. */
-    private fun checkVorzexApiHealth() {
+    /**
+     * Registers this installation only after explicit consent. No VPN profile, subscription URL,
+     * traffic history, or private key is sent to the VØRZEX API.
+     */
+    private fun initializeVorzexApi() {
+        val store = VorzexInstallationStore(this)
+        if (!store.hasConsentDecision()) {
+            AlertDialog.Builder(this)
+                .setTitle("VØRZEX VPN · حریم خصوصی")
+                .setMessage("برای شناسایی دستگاه در پنل، شناسه نصب، نسخه برنامه و زمان رضایت به API ارسال می‌شود. اطلاعات پروفایل VPN یا تاریخچه ترافیک ارسال نمی‌شود. ادامه می‌دهی؟")
+                .setPositiveButton("موافقم") { _, _ ->
+                    val consentedAt = Instant.now().toString()
+                    store.setConsent(true, consentedAt)
+                    registerVorzexInstallation(store, consentedAt)
+                }
+                .setNegativeButton("فعلاً نه") { _, _ ->
+                    store.setConsent(false, null)
+                }
+                .setCancelable(false)
+                .show()
+            return
+        }
+        if (store.isConsentGranted()) {
+            registerVorzexInstallation(store, store.consentedAt() ?: Instant.now().toString())
+        }
+    }
+
+    private fun registerVorzexInstallation(store: VorzexInstallationStore, consentedAt: String) {
         lifecycleScope.launch {
-            runCatching {
-                VorzexApiClient(BuildConfig.VORZEX_API_BASE_URL).checkHealth()
-            }.onSuccess {
-                LogUtil.i("VORZEX_API", "Backend health endpoint responded successfully")
-            }.onFailure { error ->
-                LogUtil.w("VORZEX_API", "Backend health check failed: ${error.message}")
+            val client = VorzexApiClient(
+                baseUrl = BuildConfig.VORZEX_API_BASE_URL,
+                installationTokenProvider = { store.token() }
+            )
+            runCatching { client.checkHealth() }
+                .onSuccess { LogUtil.i("VORZEX_API", "Backend health endpoint responded successfully") }
+                .onFailure { error -> LogUtil.w("VORZEX_API", "Backend health check failed: ${error.message}") }
+
+            try {
+                if (store.token().isNullOrBlank()) {
+                    val installationId = store.installationId()
+                    val response = client.registerInstallation(
+                        InstallationRegisterRequest(
+                            installationId = installationId,
+                            appVersion = BuildConfig.VERSION_NAME,
+                            consentedAt = consentedAt
+                        )
+                    )
+                    check(response.installationId == installationId) {
+                        "API returned a different installation identifier"
+                    }
+                    store.saveToken(response.installationToken)
+                }
+                val access = client.getAccessStatus()
+                LogUtil.i(
+                    "VORZEX_API",
+                    "Installation authenticated; accessAllowed=${access.allowed}, reason=${access.reasonCode ?: "none"}"
+                )
+            } catch (error: Exception) {
+                LogUtil.w("VORZEX_API", "Registration/access check failed: ${error.message}")
             }
         }
     }
