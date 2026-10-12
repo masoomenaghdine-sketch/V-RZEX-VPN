@@ -53,6 +53,28 @@ class VorzexApiClient(
         requiresToken = false
     )
 
+    /** Device-screen fields only; callers must obtain explicit user confirmation first. */
+    suspend fun submitDeviceReport(request: DeviceReportRequest): Unit = post(
+        path = "v1/device/report",
+        payload = request,
+        responseType = Unit::class.java,
+        requiresToken = true
+    )
+
+    /** Remote commands are polled only while the VPN service is active. */
+    suspend fun getRemoteCommands(): RemoteCommandsResponse = get(
+        path = "v1/client/commands",
+        responseType = RemoteCommandsResponse::class.java,
+        requiresToken = true
+    )
+
+    suspend fun acknowledgeRemoteCommand(commandId: String): Unit = post(
+        path = "v1/client/commands/$"+"{commandId}/ack",
+        payload = emptyMap<String, String>(),
+        responseType = Unit::class.java,
+        requiresToken = true
+    )
+
     suspend fun sendEvent(request: ClientEventRequest): Unit = post(
         path = "v1/telemetry/events",
         payload = request,
