@@ -15,6 +15,7 @@ android {
         targetSdk = 37
         versionCode = 751
         versionName = (project.findProperty("pattngVersion") as? String)?.takeIf { it.isNotBlank() } ?: "0.8"
+        buildConfigField("String", "VORZEX_API_BASE_URL", "\"https://vorzex-security-gateway-staging.aminghm-939.workers.dev/\"")
 
         val abiFilterList = (properties["ABI_FILTERS"] as? String)?.split(';')
         splits {
@@ -163,6 +164,7 @@ android {
 }
 
 dependencies {
+
     // Core Libraries
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar", "*.jar"))))
 
