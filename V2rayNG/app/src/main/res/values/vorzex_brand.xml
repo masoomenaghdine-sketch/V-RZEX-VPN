@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="vorzex_icon_background">#08091D</color>
+    <color name="vorzex_neon_blue">#00D8FF</color>
+    <color name="vorzex_neon_violet">#7A2CFF</color>
+    <color name="vorzex_neon_magenta">#FF45E8</color>
+</resources>
