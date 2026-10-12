@@ -9,7 +9,10 @@ on:
   push:
     branches:
       - master
+  pull_request:
+    branches:
       - my-releases
+      - feature/vxv-tor-slipnet-replacement
 
 permissions:
   contents: write
@@ -22,9 +25,7 @@ jobs:
       # release cannot change or break the release build on its own. Bump it together with
       # the aether submodule.
       RUST_TOOLCHAIN: "1.99.0"
-      # The Go line the Psiphon client's go.mod asks for, which also covers lyrebird's older one;
-      # aether/psiphon-build.sh and aether/pt-build.sh pin the programs themselves. Bump it when a
-      # bumped aether submodule pins a program that asks for a newer line.
+      # The Go line used by Aether's Psiphon client and Tor pluggable transports (lyrebird).
       GO_VERSION: "1.26"
 
     steps:
@@ -96,7 +97,7 @@ jobs:
         key: libaether-${{ runner.os }}-${{ env.NDK_HOME }}-${{ env.RUST_TOOLCHAIN }}-${{ hashFiles('.git/modules/aether/HEAD') }}-${{ hashFiles('compile-aether.sh') }}
 
     - name: Install Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v6
       with:
         go-version: ${{ env.GO_VERSION }}
         # The client is built from a checkout of its own; there is no go.sum here to cache by.
@@ -180,6 +181,7 @@ jobs:
         java-version: '21'
 
     - name: Decode Keystore
+      if: ${{ github.event_name != 'pull_request' }}
       uses: timheuer/base64-to-file@v2.0.0
       id: android_keystore
       with:
@@ -195,14 +197,20 @@ jobs:
         # build before anything is assembled or signed.
         ./gradlew :app:testPlaystoreDebugUnitTest
         ./gradlew licenseFdroidReleaseReport
-        ./gradlew assembleRelease -PpattngVersion="${{ inputs.release_tag }}" -Pandroid.injected.signing.store.file=${{ steps.android_keystore.outputs.filePath }} -Pandroid.injected.signing.store.password=${{ secrets.APP_KEYSTORE_PASSWORD }} -Pandroid.injected.signing.key.alias=${{ secrets.APP_KEYSTORE_ALIAS }} -Pandroid.injected.signing.key.password=${{ secrets.APP_KEY_PASSWORD }}
+        if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+          # Pull requests build debug APKs without needing release-signing secrets.
+          ./gradlew assembleDebug
+        else
+          # Release builds must use the configured project signing key.
+          ./gradlew assembleRelease -PpattngVersion="${{ inputs.release_tag }}" -Pandroid.injected.signing.store.file=${{ steps.android_keystore.outputs.filePath }} -Pandroid.injected.signing.store.password=${{ secrets.APP_KEYSTORE_PASSWORD }} -Pandroid.injected.signing.key.alias=${{ secrets.APP_KEYSTORE_ALIAS }} -Pandroid.injected.signing.key.password=${{ secrets.APP_KEY_PASSWORD }}
+        fi
     
     - name: Check the native libraries in the APKs
       run: |
         # Looked into as ZIP files: every ABI the Aether core is built for has to carry the core, its
         # Psiphon client and its pluggable transport, and each APK's native files are listed for the record.
         status=0
-        for apk in ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/*/release/*.apk; do
+        for apk in ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/*/{debug,release}/*.apk; do
           entries=$(unzip -Z1 "$apk" | grep '^lib/' || true)
           echo "$(basename "$apk"):"
           echo "$entries" | sed 's/^/  /'
@@ -220,31 +228,38 @@ jobs:
 
     - name: Upload arm64-v8a APK
       uses: actions/upload-artifact@v7
-      if: ${{  success() }}
+      if: ${{ success() && github.event_name != 'pull_request' }}
       with:
         name: arm64-v8a
         path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/*/release/*arm64-v8a*.apk
 
     - name: Upload armeabi-v7a APK
       uses: actions/upload-artifact@v7
-      if: ${{  success() }}
+      if: ${{ success() && github.event_name != 'pull_request' }}
       with:
         name: armeabi-v7a
         path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/*/release/*armeabi-v7a*.apk
 
     - name: Upload x86 APK
       uses: actions/upload-artifact@v7
-      if: ${{  success() }}
+      if: ${{ success() && github.event_name != 'pull_request' }}
       with:
         name: x86-apk
         path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/*/release/*x86*.apk
 
     - name: Upload universal APK
       uses: actions/upload-artifact@v7
-      if: ${{ success() }}
+      if: ${{ success() && github.event_name != 'pull_request' }}
       with:
         name: universal-apk
         path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/*/release/*universal*.apk
+
+    - name: Upload pull-request debug APKs
+      uses: actions/upload-artifact@v7
+      if: ${{ success() && github.event_name == 'pull_request' }}
+      with:
+        name: vorzex-vpn-debug-apks
+        path: ${{ github.workspace }}/V2rayNG/app/build/outputs/apk/*/debug/*.apk
 
   sign-and-release:
     needs: build
@@ -269,14 +284,14 @@ jobs:
             gpg --batch --yes --local-user "$KEY" --detach-sign --output "release-files/$(basename "$apk").sig" "$apk"
           done
 
-          gpg --armor --export "$KEY" > release-files/PattNG-public-key.asc
+          gpg --armor --export "$KEY" > release-files/VORZEX-VPN-public-key.asc
 
       - name: Upload APKs, signatures and public key to release
         uses: svenstaro/upload-release-action@v2
         with:
           file: release-files/*
           tag: ${{ inputs.release_tag }}
-          release_name: PattNG v${{ inputs.release_tag }}
+          release_name: VØRZEX VPN v${{ inputs.release_tag }}
           body: "."
           target_commit: ${{ github.sha }}
           file_glob: true
