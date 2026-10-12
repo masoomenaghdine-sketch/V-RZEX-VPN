@@ -163,6 +163,10 @@ class MainActivity : HelperBaseComponentActivity() {
     }
 
     private fun navigateTo(destination: MainDestination) {
+        if (destination == MainDestination.Cnr) {
+            startActivity(Intent(this, CnrActivity::class.java))
+            return
+        }
         if (destination == MainDestination.TorNetwork) {
             // Open a Tor-only starter profile in the existing Aether editor. The existing
             // Tor/lyrebird engine is reused; existing VPN profiles and settings remain intact.
@@ -179,6 +183,7 @@ class MainActivity : HelperBaseComponentActivity() {
             MainDestination.UserAssets -> Intent(this, UserAssetActivity::class.java)
             MainDestination.Settings -> Intent(this, SettingsActivity::class.java)
             MainDestination.TorNetwork -> error("Tor Network is handled before building the settings intent")
+            MainDestination.Cnr -> error("CNR is handled before building the settings intent")
             MainDestination.Logcat -> Intent(this, LogcatActivity::class.java)
             MainDestination.CheckUpdate -> Intent(this, CheckUpdateActivity::class.java)
             MainDestination.BackupRestore -> Intent(this, BackupActivity::class.java)
