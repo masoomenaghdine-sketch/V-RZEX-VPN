@@ -785,4 +785,6 @@
         <item>Aggressive</item>
     </string-array>
 
+    <string name="psiphon_cdn_quick_setup">Psiphon CDN · Connect without config</string>
+    <string name="psiphon_cdn_profile_name">Psiphon CDN · VØRZEX</string>
 </resources>
