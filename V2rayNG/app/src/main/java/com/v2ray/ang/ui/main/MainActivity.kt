@@ -56,7 +56,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class MainActivity : HelperBaseComponentActivity() {
-    private var pendingPsiphonQuickConnect = false
+    private var pendingAetherQuickConnect = false
     private val mainViewModel: MainViewModel by viewModels {
         MainViewModel.Factory(application, MainRepository(application as AngApplication))
     }
@@ -69,15 +69,15 @@ class MainActivity : HelperBaseComponentActivity() {
     private val profileEditorLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode != RESULT_OK) {
-                pendingPsiphonQuickConnect = false
+                pendingAetherQuickConnect = false
                 return@registerForActivityResult
             }
             val data = result.data ?: run {
-                pendingPsiphonQuickConnect = false
+                pendingAetherQuickConnect = false
                 return@registerForActivityResult
             }
             val action = data.getStringExtra(ProfileEditorResult.EXTRA_ACTION) ?: run {
-                pendingPsiphonQuickConnect = false
+                pendingAetherQuickConnect = false
                 return@registerForActivityResult
             }
             if (action != ProfileEditorResult.ACTION_SAVED &&
@@ -87,9 +87,9 @@ class MainActivity : HelperBaseComponentActivity() {
                 ProfileEditorResult.EXTRA_RESTART_SERVICE, false
             )
             val savedGuid = data.getStringExtra(ProfileEditorResult.EXTRA_GUID)
-            val psiphonQuickConnect = pendingPsiphonQuickConnect && action == ProfileEditorResult.ACTION_SAVED
-            pendingPsiphonQuickConnect = false
-            if (psiphonQuickConnect && !savedGuid.isNullOrBlank()) {
+            val quickConnect = pendingAetherQuickConnect && action == ProfileEditorResult.ACTION_SAVED
+            pendingAetherQuickConnect = false
+            if (quickConnect && !savedGuid.isNullOrBlank()) {
                 mainViewModel.updateSelectedGuid(savedGuid)
                 mainViewModel.onAction(MainAction.RefreshGroups)
                 LauncherManager.restartServiceOrStart(this, ::requestServiceStart)
@@ -150,7 +150,7 @@ class MainActivity : HelperBaseComponentActivity() {
             },
             onNavigate = { route -> navigateTo(route) },
             onPsiphonQuickSetup = {
-                pendingPsiphonQuickConnect = true
+                pendingAetherQuickConnect = true
                 profileEditorLauncher.launch(
                     Intent(this, ServerAetherActivity::class.java)
                         .putExtra(ServerAetherActivity.EXTRA_PSIPHON_QUICK_SETUP, true)
@@ -184,7 +184,9 @@ class MainActivity : HelperBaseComponentActivity() {
         if (destination == MainDestination.TorNetwork) {
             // Open a Tor-only starter profile in the existing Aether editor. The existing
             // Tor/lyrebird engine is reused; existing VPN profiles and settings remain intact.
-            startActivity(
+            // Use the result launcher so saving the starter profile selects it and starts the VPN.
+            pendingAetherQuickConnect = true
+            profileEditorLauncher.launch(
                 Intent(this, ServerAetherActivity::class.java)
                     .putExtra(ServerAetherActivity.EXTRA_TOR_QUICK_SETUP, true)
             )
