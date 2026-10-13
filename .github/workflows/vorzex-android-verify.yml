@@ -1,0 +1,55 @@
+name: VØRZEX Android verification
+
+on:
+  push:
+    branches:
+      - my-releases
+  pull_request:
+    branches:
+      - my-releases
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vorzex-android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Make Gradle wrapper executable
+        working-directory: V2rayNG
+        run: chmod +x ./gradlew
+
+      - name: Run Play Store debug unit tests
+        working-directory: V2rayNG
+        run: ./gradlew --no-daemon :app:testPlaystoreDebugUnitTest
+
+      - name: Build Play Store debug APK
+        working-directory: V2rayNG
+        run: ./gradlew --no-daemon :app:assemblePlaystoreDebug
+
+      - name: Upload APK outputs
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vorzex-vpn-playstore-debug-apks
+          path: V2rayNG/app/build/outputs/apk/playstore/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
