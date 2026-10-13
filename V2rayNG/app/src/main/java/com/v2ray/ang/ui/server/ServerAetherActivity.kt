@@ -85,6 +85,7 @@ import java.util.Locale
 class ServerAetherActivity : BaseServerActivity() {
     companion object {
         const val EXTRA_TOR_QUICK_SETUP = "tor_quick_setup"
+        const val EXTRA_PSIPHON_QUICK_SETUP = "psiphon_quick_setup"
     }
 
     override val serverConfigType: EConfigType = EConfigType.AETHER
@@ -109,12 +110,22 @@ class ServerAetherActivity : BaseServerActivity() {
     override fun EditorContent() {
         val uiState = rememberSaveable(saver = ServerUiState.Saver) {
             ServerUiState.from(initialConfig = initialConfig).apply {
-                if (intent.getBooleanExtra(EXTRA_TOR_QUICK_SETUP, false) && editGuid.isBlank()) {
+                if (editGuid.isBlank() && intent.getBooleanExtra(EXTRA_TOR_QUICK_SETUP, false)) {
                     remarks = getString(R.string.tor_profile_name)
                     aetherTor = AetherTor.ONLY.type
                     aetherTorBridges = AetherTorBridges.AUTO.type
                     aetherTorRelays = AetherTorRelays.AUTO.type
                     aetherPsiphon = AetherPsiphon.OFF.type
+                }
+                if (editGuid.isBlank() && intent.getBooleanExtra(EXTRA_PSIPHON_QUICK_SETUP, false)) {
+                    remarks = getString(R.string.psiphon_cdn_profile_name)
+                    aetherTor = AetherTor.OFF.type
+                    aetherPsiphon = AetherPsiphon.ONLY.type
+                    aetherPsiphonMode = AetherPsiphonMode.AUTO.type
+                    aetherPsiphonCdnIps = ""
+                    aetherPsiphonCdnSni = ""
+                    aetherPsiphonCdnSets = ""
+                    aetherPsiphonBundledList = true
                 }
             }
         }.apply {
