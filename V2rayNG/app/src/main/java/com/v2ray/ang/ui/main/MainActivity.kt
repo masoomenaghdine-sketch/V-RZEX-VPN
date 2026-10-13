@@ -151,7 +151,7 @@ class MainActivity : HelperBaseComponentActivity() {
             onNavigate = { route -> navigateTo(route) },
             onPsiphonQuickSetup = {
                 pendingPsiphonQuickConnect = true
-                startActivity(
+                profileEditorLauncher.launch(
                     Intent(this, ServerAetherActivity::class.java)
                         .putExtra(ServerAetherActivity.EXTRA_PSIPHON_QUICK_SETUP, true)
                 )
