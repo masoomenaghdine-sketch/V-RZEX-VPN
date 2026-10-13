@@ -86,6 +86,7 @@ class ServerAetherActivity : BaseServerActivity() {
     companion object {
         const val EXTRA_TOR_QUICK_SETUP = "tor_quick_setup"
         const val EXTRA_PSIPHON_QUICK_SETUP = "psiphon_quick_setup"
+        const val EXTRA_AI_QUICK_SETUP = "ai_quick_setup"
     }
 
     override val serverConfigType: EConfigType = EConfigType.AETHER
@@ -127,6 +128,16 @@ class ServerAetherActivity : BaseServerActivity() {
                     aetherPsiphonCdnSets = ""
                     aetherPsiphonBundledList = true
                 }
+                if (editGuid.isBlank() && intent.getBooleanExtra(EXTRA_AI_QUICK_SETUP, false)) {
+                    remarks = "AI_CON"
+                    aetherTor = AetherTor.OFF.type
+                    aetherPsiphon = AetherPsiphon.ONLY.type
+                    aetherPsiphonMode = AetherPsiphonMode.AUTO.type
+                    aetherPsiphonCdnIps = ""
+                    aetherPsiphonCdnSni = ""
+                    aetherPsiphonCdnSets = ""
+                    aetherPsiphonBundledList = true
+                }
             }
         }.apply {
             configType = serverConfigType
@@ -140,6 +151,17 @@ class ServerAetherActivity : BaseServerActivity() {
         val log by viewModel.log.collectAsStateWithLifecycle()
         val listenPort by viewModel.listenPort.collectAsStateWithLifecycle()
         val keysCheck by viewModel.keysCheck.collectAsStateWithLifecycle()
+
+        // AI_CON uses the bundled Psiphon bootstrap and saves without making the user fill in
+        // manual Aether fields. The normal editor/key checks still run before the profile is saved.
+        LaunchedEffect(editGuid, isPsiphonAvailable, intent.getBooleanExtra(EXTRA_AI_QUICK_SETUP, false)) {
+            if (editGuid.isBlank() &&
+                intent.getBooleanExtra(EXTRA_AI_QUICK_SETUP, false) &&
+                isPsiphonAvailable
+            ) {
+                requestSave(uiState, listenPort)
+            }
+        }
         val exitNodes by viewModel.exitNodes.collectAsStateWithLifecycle()
         // Folded away unless one of its settings holds a value, so a profile that set one shows it at once.
         var showOther by rememberSaveable { mutableStateOf(uiState.hasOtherAetherSettings) }
