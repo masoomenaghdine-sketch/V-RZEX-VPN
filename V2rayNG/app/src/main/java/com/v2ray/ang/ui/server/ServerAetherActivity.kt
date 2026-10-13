@@ -35,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -56,6 +57,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.v2ray.ang.R
 import com.v2ray.ang.core.AetherCore
+import com.v2ray.ang.core.AiNetworkAdvisor
 import com.v2ray.ang.core.AetherCoreManager
 import com.v2ray.ang.core.AetherExit
 import com.v2ray.ang.core.AetherScanResult
@@ -109,6 +111,8 @@ class ServerAetherActivity : BaseServerActivity() {
 
     @Composable
     override fun EditorContent() {
+        // Take one local snapshot per editor visit; nothing about the network is uploaded.
+        val aiNetwork = remember { AiNetworkAdvisor.assess(this@ServerAetherActivity) }
         val uiState = rememberSaveable(saver = ServerUiState.Saver) {
             ServerUiState.from(initialConfig = initialConfig).apply {
                 if (editGuid.isBlank() && intent.getBooleanExtra(EXTRA_TOR_QUICK_SETUP, false)) {
@@ -130,8 +134,12 @@ class ServerAetherActivity : BaseServerActivity() {
                 }
                 if (editGuid.isBlank() && intent.getBooleanExtra(EXTRA_AI_QUICK_SETUP, false)) {
                     remarks = "AI_CON"
+                    // Start with a real Aether MASQUE profile. The local network advisor selects
+                    // HTTP/2 on constrained links and HTTP/3 only on a strong unmetered link.
+                    aetherProtocol = AetherProtocol.MASQUE.type
+                    aetherTransport = aiNetwork.preferredTransport.type
                     aetherTor = AetherTor.OFF.type
-                    aetherPsiphon = AetherPsiphon.ONLY.type
+                    aetherPsiphon = AetherPsiphon.OFF.type
                     aetherPsiphonMode = AetherPsiphonMode.AUTO.type
                     aetherPsiphonCdnIps = ""
                     aetherPsiphonCdnSni = ""
@@ -152,26 +160,50 @@ class ServerAetherActivity : BaseServerActivity() {
         val listenPort by viewModel.listenPort.collectAsStateWithLifecycle()
         val keysCheck by viewModel.keysCheck.collectAsStateWithLifecycle()
 
-        // AI_CON is generated locally: prefer the independent Psiphon bootstrap. If this build
-        // has no Psiphon binary, fall back to the bundled Tor bridge transport instead of leaving
-        // the user stranded in the manual editor. This does not invent an Xray server endpoint;
-        // Xray profiles still need real server credentials.
+        // AI_CON is assembled on-device, not downloaded. It uses the observed link class to
+        // choose a conservative transport: Psiphon-only on metered/cellular/weak links, direct
+        // MASQUE on strong unmetered links, then Tor bridges if Psiphon is unavailable. This is
+        // adaptive heuristics, not a guarantee against filtering. No fake Xray server credentials
+        // are generated: VLESS+Reality needs a reachable server and its real keys.
         val isAiQuickSetup = intent.getBooleanExtra(EXTRA_AI_QUICK_SETUP, false)
-        LaunchedEffect(editGuid, isCoreAvailable, isPsiphonAvailable, isTorTransportsAvailable, isAiQuickSetup) {
+        LaunchedEffect(editGuid, isCoreAvailable, isPsiphonAvailable, isTorTransportsAvailable, isAiQuickSetup, aiNetwork) {
             if (editGuid.isNotBlank() || !isAiQuickSetup || !isCoreAvailable) return@LaunchedEffect
             when {
-                isPsiphonAvailable -> requestSave(uiState, listenPort)
+                isPsiphonAvailable && aiNetwork.constrained -> {
+                    uiState.aetherProtocol = AetherProtocol.MASQUE.type
+                    uiState.aetherTransport = AetherTransport.HTTP2.type
+                    uiState.aetherTor = AetherTor.OFF.type
+                    uiState.aetherPsiphon = AetherPsiphon.ONLY.type
+                    uiState.aetherPsiphonMode = AetherPsiphonMode.AUTO.type
+                    uiState.aetherPsiphonBundledList = true
+                    requestSave(uiState, listenPort)
+                }
+                isPsiphonAvailable -> {
+                    uiState.aetherProtocol = AetherProtocol.MASQUE.type
+                    uiState.aetherTransport = AetherTransport.HTTP3.type
+                    uiState.aetherTor = AetherTor.OFF.type
+                    uiState.aetherPsiphon = AetherPsiphon.OFF.type
+                    requestSave(uiState, listenPort)
+                }
                 isTorTransportsAvailable -> {
                     uiState.remarks = "AI_CON"
+                    uiState.aetherProtocol = AetherProtocol.MASQUE.type
+                    uiState.aetherTransport = aiNetwork.preferredTransport.type
                     uiState.aetherTor = AetherTor.ONLY.type
                     uiState.aetherTorBridges = AetherTorBridges.AUTO.type
                     uiState.aetherTorRelays = AetherTorRelays.AUTO.type
                     uiState.aetherPsiphon = AetherPsiphon.OFF.type
                     requestSave(uiState, listenPort)
                 }
-                // Leave the editor open when neither transport is bundled. Saving a profile that
-                // cannot start would mislead the user into thinking AI had created a usable tunnel.
-                else -> Unit
+                else -> {
+                    // Last resort: let Aether use its own endpoint scan with the transport selected
+                    // above. If neither core nor a real endpoint is available, never invent one.
+                    uiState.aetherProtocol = AetherProtocol.MASQUE.type
+                    uiState.aetherTransport = aiNetwork.preferredTransport.type
+                    uiState.aetherPsiphon = AetherPsiphon.OFF.type
+                    uiState.aetherTor = AetherTor.OFF.type
+                    requestSave(uiState, listenPort)
+                }
             }
         }
         val exitNodes by viewModel.exitNodes.collectAsStateWithLifecycle()
