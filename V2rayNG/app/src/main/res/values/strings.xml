@@ -672,7 +672,7 @@
     <string name="aether_core_stopped">The Aether core stopped running</string>
     <string name="aether_core_stopped_no_ech_key">The Aether core stopped: ECH is on, but no usable ECH key was found. Without one, the server name would have gone out in the clear.</string>
     <string name="aether_core_connecting">The Aether core is still connecting</string>
-    <string name="menu_item_ai_config">AI_CON · Smart config</string>
+    <string name="menu_item_ai_config">AI · Auto-build & connect (AI_CON)</string>
     <string name="aether_action_renew_key">Get new WARP keys…</string>
     <string name="aether_action_renewing_key">Getting new WARP keys…</string>
     <string name="aether_log_title">Log</string>
