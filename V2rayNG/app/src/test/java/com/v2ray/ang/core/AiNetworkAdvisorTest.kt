@@ -2,12 +2,13 @@ package com.v2ray.ang.core
 
 import com.v2ray.ang.enums.AetherTransport
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class AiNetworkAdvisorTest {
     @Test
-    fun cellularNetworkPrefersTcpTransport() {
+    fun cellularNetworkPrefersTcpEvenWithGoodBandwidth() {
         val snapshot = AiNetworkSnapshot(
             cellular = true,
             metered = true,
@@ -32,6 +33,19 @@ class AiNetworkAdvisorTest {
     }
 
     @Test
+    fun mediumWifiUsesConservativeTcpTransport() {
+        val snapshot = AiNetworkSnapshot(
+            cellular = false,
+            metered = false,
+            downstreamKbps = 9_000,
+            upstreamKbps = 2_000,
+            signalDbm = -75,
+        )
+        assertTrue(snapshot.constrained)
+        assertEquals(AetherTransport.HTTP2, snapshot.preferredTransport)
+    }
+
+    @Test
     fun strongUnmeteredWifiPrefersHttp3() {
         val snapshot = AiNetworkSnapshot(
             cellular = false,
@@ -40,7 +54,21 @@ class AiNetworkAdvisorTest {
             upstreamKbps = 20_000,
             signalDbm = -55,
         )
+        assertTrue(snapshot.strongUnmeteredWifi)
+        assertFalse(snapshot.constrained)
         assertEquals(AetherTransport.HTTP3, snapshot.preferredTransport)
+    }
+
+    @Test
+    fun unknownSignalChoosesConservativeTcp() {
+        val snapshot = AiNetworkSnapshot(
+            cellular = false,
+            metered = false,
+            downstreamKbps = 80_000,
+            upstreamKbps = 20_000,
+            signalDbm = null,
+        )
+        assertEquals(AetherTransport.HTTP2, snapshot.preferredTransport)
     }
 
     @Test
