@@ -665,7 +665,7 @@
     <string name="aether_core_stopped">هسته Aether متوقف شده است</string>
     <string name="aether_core_stopped_no_ech_key">هسته Aether متوقف شد: ECH روشن است ولی هیچ کلید ECH قابل استفاده‌ای پیدا نشد. بدون آن، نام سرور به‌صورت آشکار فرستاده می‌شد.</string>
     <string name="aether_core_connecting">هسته Aether هنوز در حال اتصال است</string>
-    <string name="menu_item_ai_config">AI_CON · ساخت هوشمند کانفیگ</string>
+    <string name="menu_item_ai_config">AI · ساخت و اتصال خودکار (AI_CON)</string>
     <string name="aether_action_renew_key">دریافت کلیدهای جدید WARP…</string>
     <string name="aether_action_renewing_key">در حال دریافت کلیدهای جدید WARP…</string>
     <string name="aether_log_title">لاگ</string>
