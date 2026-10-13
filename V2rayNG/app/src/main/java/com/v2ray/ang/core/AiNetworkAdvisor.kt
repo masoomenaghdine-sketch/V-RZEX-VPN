@@ -8,7 +8,10 @@ import com.v2ray.ang.enums.AetherTransport
 
 /**
  * A local, privacy-preserving snapshot used by AI_CON to pick a conservative transport.
- * It does not read the SIM phone number, carrier identifiers, or send network data anywhere.
+ *
+ * Android exposes the access-network class and estimated link capacity, but not a reliable,
+ * universal SIM/operator firewall profile. We deliberately do not read phone numbers, SIM IDs,
+ * or carrier identifiers, and never upload these observations.
  */
 internal data class AiNetworkSnapshot(
     val cellular: Boolean,
@@ -18,25 +21,40 @@ internal data class AiNetworkSnapshot(
     val signalDbm: Int?,
 ) {
     /**
-     * HTTP/2 over TCP is the conservative choice for metered/cellular, weak-signal, or
-     * bandwidth-constrained links. HTTP/3 is preferred only on a seemingly strong unmetered link.
-     * This is a heuristic, not a promise that a protocol is reachable on a filtered network.
+     * Prefer HTTP/3 only on a clearly strong, unmetered Wi-Fi link with known signal quality.
+     * Cellular, metered, unknown, and constrained links use HTTP/2/TCP because UDP/QUIC can be
+     * unreliable on filtered or degraded networks. This is an adaptive heuristic, not a guarantee.
      */
+    val strongUnmeteredWifi: Boolean
+        get() = !cellular &&
+            !metered &&
+            downstreamKbps >= MIN_HTTP3_DOWNSTREAM_KBPS &&
+            upstreamKbps >= MIN_HTTP3_UPSTREAM_KBPS &&
+            signalDbm != null &&
+            signalDbm >= MIN_HTTP3_SIGNAL_DBM
+
     val constrained: Boolean
-        get() = cellular || metered ||
-            (downstreamKbps <= 5_000) ||
-            (upstreamKbps <= 1_000) ||
-            (signalDbm != null && signalDbm < -100)
+        get() = !strongUnmeteredWifi
 
     val preferredTransport: AetherTransport
-        get() = if (constrained) AetherTransport.HTTP2 else AetherTransport.HTTP3
+        get() = if (strongUnmeteredWifi) AetherTransport.HTTP3 else AetherTransport.HTTP2
+
+    companion object {
+        internal const val MIN_HTTP3_DOWNSTREAM_KBPS = 15_000
+        internal const val MIN_HTTP3_UPSTREAM_KBPS = 3_000
+        internal const val MIN_HTTP3_SIGNAL_DBM = -85
+    }
 }
 
 internal object AiNetworkAdvisor {
     fun assess(context: Context): AiNetworkSnapshot {
         val manager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
         val network = manager?.activeNetwork
-        val capabilities = if (manager != null && network != null) manager.getNetworkCapabilities(network) else null
+        val capabilities = if (manager != null && network != null) {
+            manager.getNetworkCapabilities(network)
+        } else {
+            null
+        }
         val cellular = capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) == true
         val signal = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             capabilities?.signalStrength?.takeIf { it != Int.MIN_VALUE && it < 0 }
