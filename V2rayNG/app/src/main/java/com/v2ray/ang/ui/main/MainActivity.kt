@@ -82,7 +82,10 @@ class MainActivity : HelperBaseComponentActivity() {
             }
             if (action != ProfileEditorResult.ACTION_SAVED &&
                 action != ProfileEditorResult.ACTION_DELETED
-            ) return@registerForActivityResult
+            ) {
+                pendingAetherQuickConnect = false
+                return@registerForActivityResult
+            }
             val restartService = data.getBooleanExtra(
                 ProfileEditorResult.EXTRA_RESTART_SERVICE, false
             )
