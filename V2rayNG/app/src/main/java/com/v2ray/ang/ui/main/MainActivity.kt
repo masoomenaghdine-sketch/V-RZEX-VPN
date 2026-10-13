@@ -56,6 +56,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class MainActivity : HelperBaseComponentActivity() {
+    private var pendingPsiphonQuickConnect = false
     private val mainViewModel: MainViewModel by viewModels {
         MainViewModel.Factory(application, MainRepository(application as AngApplication))
     }
@@ -77,8 +78,17 @@ class MainActivity : HelperBaseComponentActivity() {
             val restartService = data.getBooleanExtra(
                 ProfileEditorResult.EXTRA_RESTART_SERVICE, false
             )
+            val savedGuid = data.getStringExtra(ProfileEditorResult.EXTRA_GUID)
+            val psiphonQuickConnect = pendingPsiphonQuickConnect && action == ProfileEditorResult.ACTION_SAVED
+            pendingPsiphonQuickConnect = false
+            if (psiphonQuickConnect && !savedGuid.isNullOrBlank()) {
+                mainViewModel.updateSelectedGuid(savedGuid)
+                mainViewModel.onAction(MainAction.RefreshGroups)
+                LauncherManager.restartServiceOrStart(this, ::requestServiceStart)
+                return@registerForActivityResult
+            }
             val selectedProfileSaved = action == ProfileEditorResult.ACTION_SAVED &&
-                    data.getStringExtra(ProfileEditorResult.EXTRA_GUID) == mainViewModel.uiState.value.selectedGuid
+                    savedGuid == mainViewModel.uiState.value.selectedGuid
             mainViewModel.onAction(MainAction.RefreshGroups)
             if (restartService || selectedProfileSaved) LauncherManager.restartService(this)
         }
@@ -131,7 +141,13 @@ class MainActivity : HelperBaseComponentActivity() {
                 }
             },
             onNavigate = { route -> navigateTo(route) },
-
+            onPsiphonQuickSetup = {
+                pendingPsiphonQuickConnect = true
+                startActivity(
+                    Intent(this, ServerAetherActivity::class.java)
+                        .putExtra(ServerAetherActivity.EXTRA_PSIPHON_QUICK_SETUP, true)
+                )
+            },
         )
     }
 
