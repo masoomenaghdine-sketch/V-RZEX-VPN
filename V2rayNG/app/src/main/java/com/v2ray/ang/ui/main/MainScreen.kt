@@ -4,6 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -38,7 +41,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
@@ -233,6 +238,11 @@ fun MainScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
+                ConnectionStatusHero(
+                    isRunning = isRunning,
+                    displayText = displayText,
+                    onToggle = { onAction(MainAction.ToggleService) }
+                )
                 QuickAccessPanel(
                     onCnr = { onNavigate(MainDestination.Cnr) },
                     onDevice = { onNavigate(MainDestination.Device) },
@@ -293,6 +303,83 @@ fun MainScreen(
                             )
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun ConnectionStatusHero(
+    isRunning: Boolean,
+    displayText: String,
+    onToggle: () -> Unit
+) {
+    val cyan = Color(0xFF36E3D2)
+    val violet = Color(0xFF8F6BFF)
+    val accent = if (isRunning) cyan else violet
+    val shape = RoundedCornerShape(26.dp)
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 5.dp)
+            .border(1.dp, accent.copy(alpha = 0.38f), shape),
+        shape = shape,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.58f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 13.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                Text(
+                    text = "VØRZEX VPN",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = if (isRunning) "اتصال فعال است" else "آمادهٔ اتصال امن",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = accent
+                )
+                Text(
+                    text = displayText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .size(68.dp)
+                    .background(accent.copy(alpha = 0.12f), CircleShape)
+                    .border(1.5.dp, accent.copy(alpha = 0.72f), CircleShape)
+                    .clickable(onClick = onToggle),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(50.dp)
+                        .background(accent.copy(alpha = 0.12f), CircleShape)
+                        .border(1.dp, accent.copy(alpha = 0.35f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (isRunning) "Ⅱ" else "ϟ",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = accent
+                    )
                 }
             }
         }
