@@ -778,4 +778,6 @@
         <item>شدید</item>
     </string-array>
 
+    <string name="psiphon_cdn_quick_setup">سایفون CDN · اتصال بدون کانفیگ</string>
+    <string name="psiphon_cdn_profile_name">سایفون CDN · VØRZEX</string>
 </resources>
