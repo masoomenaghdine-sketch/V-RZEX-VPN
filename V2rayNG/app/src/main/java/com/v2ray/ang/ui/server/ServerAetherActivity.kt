@@ -152,14 +152,26 @@ class ServerAetherActivity : BaseServerActivity() {
         val listenPort by viewModel.listenPort.collectAsStateWithLifecycle()
         val keysCheck by viewModel.keysCheck.collectAsStateWithLifecycle()
 
-        // AI_CON uses the bundled Psiphon bootstrap and saves without making the user fill in
-        // manual Aether fields. The normal editor/key checks still run before the profile is saved.
-        LaunchedEffect(editGuid, isPsiphonAvailable, intent.getBooleanExtra(EXTRA_AI_QUICK_SETUP, false)) {
-            if (editGuid.isBlank() &&
-                intent.getBooleanExtra(EXTRA_AI_QUICK_SETUP, false) &&
-                isPsiphonAvailable
-            ) {
-                requestSave(uiState, listenPort)
+        // AI_CON is generated locally: prefer the independent Psiphon bootstrap. If this build
+        // has no Psiphon binary, fall back to the bundled Tor bridge transport instead of leaving
+        // the user stranded in the manual editor. This does not invent an Xray server endpoint;
+        // Xray profiles still need real server credentials.
+        val isAiQuickSetup = intent.getBooleanExtra(EXTRA_AI_QUICK_SETUP, false)
+        LaunchedEffect(editGuid, isCoreAvailable, isPsiphonAvailable, isTorTransportsAvailable, isAiQuickSetup) {
+            if (editGuid.isNotBlank() || !isAiQuickSetup || !isCoreAvailable) return@LaunchedEffect
+            when {
+                isPsiphonAvailable -> requestSave(uiState, listenPort)
+                isTorTransportsAvailable -> {
+                    uiState.remarks = "AI_CON"
+                    uiState.aetherTor = AetherTor.ONLY.type
+                    uiState.aetherTorBridges = AetherTorBridges.AUTO.type
+                    uiState.aetherTorRelays = AetherTorRelays.AUTO.type
+                    uiState.aetherPsiphon = AetherPsiphon.OFF.type
+                    requestSave(uiState, listenPort)
+                }
+                // Leave the editor open when neither transport is bundled. Saving a profile that
+                // cannot start would mislead the user into thinking AI had created a usable tunnel.
+                else -> Unit
             }
         }
         val exitNodes by viewModel.exitNodes.collectAsStateWithLifecycle()
