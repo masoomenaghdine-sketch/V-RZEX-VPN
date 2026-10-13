@@ -29,6 +29,7 @@ private enum class ImportMenuAction(@StringRes val labelRes: Int, val action: Ma
 
 enum class MainMoreMenuAction(@StringRes val labelRes: Int) {
     TorNetwork(R.string.tor_network_title),
+    PsiphonCdn(R.string.psiphon_cdn_quick_setup),
     RestartService(R.string.title_service_restart),
     DeleteAll(R.string.title_del_all_config),
     DeleteDuplicate(R.string.title_del_duplicate_config),
