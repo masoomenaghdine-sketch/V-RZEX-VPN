@@ -40,7 +40,6 @@ fun MainBottomBar(
     // VØRZEX UI palette: cyan while connected, deep-slate with violet identity while idle.
     // Keep the original MainAction.ToggleService callback so connection behavior is unchanged.
     val accentCyan = Color(0xFF36E3D2)
-    val accentViolet = Color(0xFF8F6BFF)
     val connectedColor = accentCyan
     val disconnectedColor = if (isDarkTheme) Color(0xFF151929) else Color(0xFF5856D6)
     val actionContentColor = if (isRunning) Color(0xFF04100F) else if (isDarkTheme) accentCyan else Color.White
