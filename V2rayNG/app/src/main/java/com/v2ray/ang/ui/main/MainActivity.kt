@@ -68,10 +68,18 @@ class MainActivity : HelperBaseComponentActivity() {
 
     private val profileEditorLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode != RESULT_OK) return@registerForActivityResult
-            val data = result.data ?: return@registerForActivityResult
-            val action = data.getStringExtra(ProfileEditorResult.EXTRA_ACTION)
-                ?: return@registerForActivityResult
+            if (result.resultCode != RESULT_OK) {
+                pendingPsiphonQuickConnect = false
+                return@registerForActivityResult
+            }
+            val data = result.data ?: run {
+                pendingPsiphonQuickConnect = false
+                return@registerForActivityResult
+            }
+            val action = data.getStringExtra(ProfileEditorResult.EXTRA_ACTION) ?: run {
+                pendingPsiphonQuickConnect = false
+                return@registerForActivityResult
+            }
             if (action != ProfileEditorResult.ACTION_SAVED &&
                 action != ProfileEditorResult.ACTION_DELETED
             ) return@registerForActivityResult
