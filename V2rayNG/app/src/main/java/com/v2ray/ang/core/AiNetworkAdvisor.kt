@@ -36,7 +36,7 @@ internal object AiNetworkAdvisor {
     fun assess(context: Context): AiNetworkSnapshot {
         val manager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
         val network = manager?.activeNetwork
-        val capabilities = network?.let { manager.getNetworkCapabilities(it) }
+        val capabilities = if (manager != null && network != null) manager.getNetworkCapabilities(network) else null
         val cellular = capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) == true
         val signal = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             capabilities?.signalStrength?.takeIf { it != Int.MIN_VALUE && it < 0 }
