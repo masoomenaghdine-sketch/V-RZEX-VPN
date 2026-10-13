@@ -24,8 +24,8 @@ internal data class AiNetworkSnapshot(
      */
     val constrained: Boolean
         get() = cellular || metered ||
-            (downstreamKbps in 1..5_000) ||
-            (upstreamKbps in 1..1_000) ||
+            (downstreamKbps <= 5_000) ||
+            (upstreamKbps <= 1_000) ||
             (signalDbm != null && signalDbm < -100)
 
     val preferredTransport: AetherTransport
