@@ -160,11 +160,11 @@ class ServerAetherActivity : BaseServerActivity() {
         val listenPort by viewModel.listenPort.collectAsStateWithLifecycle()
         val keysCheck by viewModel.keysCheck.collectAsStateWithLifecycle()
 
-        // AI_CON is assembled on-device, not downloaded. It uses the observed link class to
-        // choose a conservative transport: Psiphon-only on metered/cellular/weak links, direct
-        // MASQUE on strong unmetered links, then Tor bridges if Psiphon is unavailable. This is
-        // adaptive heuristics, not a guarantee against filtering. No fake Xray server credentials
-        // are generated: VLESS+Reality needs a reachable server and its real keys.
+        // AI_CON is assembled on-device, not downloaded. It uses the observed link class to choose
+        // Psiphon's CDN mode for constrained links and automatic mode for stronger unmetered links.
+        // That independent path can save/connect without a supplied Xray profile. Tor bridges are
+        // the fallback if Psiphon is unavailable; direct Aether is the last resort. These are
+        // heuristics, not a guarantee against filtering. VLESS+Reality still needs a real server.
         val isAiQuickSetup = intent.getBooleanExtra(EXTRA_AI_QUICK_SETUP, false)
         LaunchedEffect(editGuid, isCoreAvailable, isPsiphonAvailable, isTorTransportsAvailable, isAiQuickSetup, aiNetwork) {
             if (editGuid.isNotBlank() || !isAiQuickSetup || !isCoreAvailable) return@LaunchedEffect
@@ -174,15 +174,19 @@ class ServerAetherActivity : BaseServerActivity() {
                     uiState.aetherTransport = AetherTransport.HTTP2.type
                     uiState.aetherTor = AetherTor.OFF.type
                     uiState.aetherPsiphon = AetherPsiphon.ONLY.type
-                    uiState.aetherPsiphonMode = AetherPsiphonMode.AUTO.type
+                    uiState.aetherPsiphonMode = AetherPsiphonMode.CDN.type
                     uiState.aetherPsiphonBundledList = true
                     requestSave(uiState, listenPort)
                 }
                 isPsiphonAvailable -> {
+                    // Keep the no-credentials path for automatic save/connect, while letting the
+                    // Psiphon client choose its route on a strong unmetered network.
                     uiState.aetherProtocol = AetherProtocol.MASQUE.type
                     uiState.aetherTransport = AetherTransport.HTTP3.type
                     uiState.aetherTor = AetherTor.OFF.type
-                    uiState.aetherPsiphon = AetherPsiphon.OFF.type
+                    uiState.aetherPsiphon = AetherPsiphon.ONLY.type
+                    uiState.aetherPsiphonMode = AetherPsiphonMode.AUTO.type
+                    uiState.aetherPsiphonBundledList = true
                     requestSave(uiState, listenPort)
                 }
                 isTorTransportsAvailable -> {
