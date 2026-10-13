@@ -141,6 +141,7 @@ class MainActivity : HelperBaseComponentActivity() {
                     MainAction.ImportQRcode -> importQRcode()
                     MainAction.ImportClipboard -> importClipboard()
                     MainAction.ImportConfigLocal -> importConfigLocal()
+                    MainAction.GenerateAiConfig -> startAiConfigQuickSetup()
                     is MainAction.ImportManually -> importManually(action.type)
                     MainAction.RestartService -> LauncherManager.restartServiceOrStart(this, ::requestServiceStart)
                     MainAction.LocateSelectedServer -> mainViewModel.triggerLocateSelectedServer()
@@ -159,6 +160,16 @@ class MainActivity : HelperBaseComponentActivity() {
                         .putExtra(ServerAetherActivity.EXTRA_PSIPHON_QUICK_SETUP, true)
                 )
             },
+        )
+    }
+
+    private fun startAiConfigQuickSetup() {
+        // Aether/Psiphon has a bundled server bootstrap and does not need a user-supplied Xray link.
+        // Saving the generated profile returns through profileEditorLauncher, which selects it and starts VPN.
+        pendingAetherQuickConnect = true
+        profileEditorLauncher.launch(
+            Intent(this, ServerAetherActivity::class.java)
+                .putExtra(ServerAetherActivity.EXTRA_AI_QUICK_SETUP, true)
         )
     }
 
