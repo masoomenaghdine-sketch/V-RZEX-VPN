@@ -367,15 +367,16 @@ private fun QuickNavItem(
     onClick: () -> Unit
 ) {
     val shape = RoundedCornerShape(18.dp)
+    val vorzexCyan = Color(0xFF36E3D2)
     Row(
         modifier = Modifier
             .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.78f),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
                 shape = shape
             )
             .border(
                 width = 1.dp,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f),
+                color = vorzexCyan.copy(alpha = 0.24f),
                 shape = shape
             )
             .clickable(onClick = onClick)
