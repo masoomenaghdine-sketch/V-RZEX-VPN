@@ -113,6 +113,20 @@ class MainActivity : HelperBaseComponentActivity() {
             if (restartService || selectedProfileSaved) LauncherManager.restartService(this)
         }
 
+    private val torCenterLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK) {
+                val bridgeMode = result.data?.getStringExtra(ServerAetherActivity.EXTRA_TOR_BRIDGE_MODE)
+                    ?: com.v2ray.ang.enums.AetherTorBridges.AUTO.type
+                pendingAetherQuickConnect = true
+                profileEditorLauncher.launch(
+                    Intent(this, ServerAetherActivity::class.java)
+                        .putExtra(ServerAetherActivity.EXTRA_TOR_QUICK_SETUP, true)
+                        .putExtra(ServerAetherActivity.EXTRA_TOR_BRIDGE_MODE, bridgeMode)
+                )
+            }
+        }
+
     private val settingsActivityLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             val restartService = SettingsChangeManager.consumeRestartService()
@@ -378,7 +392,7 @@ class MainActivity : HelperBaseComponentActivity() {
         if (destination == MainDestination.TorNetwork) {
             // Dedicated Tor Center offers profile presets while reusing the existing Tor engine.
             // The Tor screen never rewrites or removes existing Xray profiles.
-            startActivity(Intent(this, TorCenterActivity::class.java))
+            torCenterLauncher.launch(Intent(this, TorCenterActivity::class.java))
             return
         }
         val intent = when (destination) {
