@@ -806,4 +806,5 @@
     <string name="gaming_jitter">Response variation estimate: %1$d ms</string>
     <string name="gaming_loss">Failed requests: %1$d%%</string>
     <string name="gaming_measurement_note">These are HTTPS probe timings, not ICMP ping or in-game latency. Results depend on your current network and VPN route.</string>
+    <string name="telegram_proxy_title">PT · Telegram Proxy</string>
 </resources>
