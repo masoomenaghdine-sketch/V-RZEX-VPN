@@ -67,7 +67,9 @@ class NetworkLabViewModel : ViewModel() {
                 coroutineScope {
                     candidates.map { resolver ->
                         async {
-                            val attempts = if (resolver.coreAddress in defaultResolvers.map { it.coreAddress }) 2 else 1
+                            // Keep the UI's "3/3 responses" claim accurate for every resolver.
+                            // Three samples also make the median less sensitive to one transient spike.
+                            val attempts = 3
                             val samples = mutableListOf<Long>()
                             repeat(attempts) {
                                 val elapsed = probeHttp(resolver.testUrl, timeoutMs = 1800)
