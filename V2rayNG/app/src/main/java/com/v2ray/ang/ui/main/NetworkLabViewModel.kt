@@ -44,6 +44,8 @@ data class NetworkLabState(
 class NetworkLabViewModel : ViewModel() {
     private val _state = MutableStateFlow(
         NetworkLabState(
+            // Reflect the DNS already configured for Xray when the user reopens DNS Lab.
+            selectedDns = MmkvManager.decodeSettingsString(AppConfig.PREF_REMOTE_DNS),
             gamingEnabled = MmkvManager.decodeSettingsBool(AppConfig.PREF_GAMING_MODE, false),
         )
     )
