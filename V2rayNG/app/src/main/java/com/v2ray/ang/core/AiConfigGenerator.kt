@@ -4,6 +4,13 @@ import com.v2ray.ang.AppConfig
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.enums.EConfigType
 import com.v2ray.ang.handler.MmkvManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import java.net.InetSocketAddress
+import java.net.Socket
+import android.os.SystemClock
 
 /**
  * Selects only endpoints already stored on this device. It never downloads configs or invents
@@ -15,6 +22,56 @@ internal object AiConfigGenerator {
         val profile: ProfileItem,
         val pingMillis: Long = 0L,
     )
+
+    /**
+     * Probes locally stored Xray endpoints over TCP before choosing one. This is a reachability
+     * and handshake-latency signal, not a guarantee that authentication or the full VPN tunnel works.
+     * No profiles are downloaded and no credentials are sent to any new endpoint beyond a TCP connect.
+     */
+    suspend fun bestReachableLocalXrayProfile(snapshot: AiNetworkSnapshot): Candidate? = coroutineScope {
+        val stored = MmkvManager.decodeAllServerList().distinct().mapNotNull { guid ->
+            val profile = MmkvManager.decodeServerConfig(guid) ?: return@mapNotNull null
+            if (!isUsableXrayProfile(profile)) return@mapNotNull null
+            Candidate(
+                guid = guid,
+                profile = profile,
+                pingMillis = MmkvManager.decodeServerAffiliationInfo(guid)?.testDelayMillis ?: 0L,
+            )
+        }
+        if (stored.isEmpty()) return@coroutineScope null
+
+        // Probe a bounded, diverse shortlist concurrently so a large imported list cannot stall AI setup.
+        val shortlist = stored.sortedWith(
+            compareByDescending<Candidate> { isVlessReality(it.profile) }
+                .thenBy { it.pingMillis.takeIf { ping -> ping > 0L } ?: Long.MAX_VALUE }
+        ).take(MAX_LIVE_PROBES)
+
+        val reachable = shortlist.map { candidate ->
+            async(Dispatchers.IO) {
+                val latency = tcpHandshakeLatency(candidate.profile.server.orEmpty(), candidate.profile.serverPort.orEmpty())
+                if (latency == null) null else candidate.copy(pingMillis = latency)
+            }
+        }.awaitAll().filterNotNull()
+
+        rankCandidates(reachable, snapshot)
+    }
+
+    private fun tcpHandshakeLatency(host: String, portText: String): Long? {
+        val port = portText.toIntOrNull() ?: return null
+        if (host.isBlank() || port !in 1..65535) return null
+        return try {
+            Socket().use { socket ->
+                val start = SystemClock.elapsedRealtime()
+                socket.connect(InetSocketAddress(host.trim(), port), TCP_PROBE_TIMEOUT_MS)
+                SystemClock.elapsedRealtime() - start
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private const val TCP_PROBE_TIMEOUT_MS = 1_600
+    private const val MAX_LIVE_PROBES = 32
 
     fun bestLocalXrayProfile(snapshot: AiNetworkSnapshot): Candidate? {
         val stored = MmkvManager.decodeAllServerList().distinct().mapNotNull { guid ->
