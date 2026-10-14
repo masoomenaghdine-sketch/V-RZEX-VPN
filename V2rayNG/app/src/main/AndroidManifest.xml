@@ -63,6 +63,7 @@
 
         <activity android:name=".ui.main.CnrActivity" android:exported="false" />
         <activity android:name=".ui.main.DeviceActivity" android:exported="false" />
+        <activity android:name=".ui.main.NetworkLabActivity" android:exported="false" />
 
         <activity
             android:name=".ui.main.MainActivity"
