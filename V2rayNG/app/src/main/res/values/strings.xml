@@ -800,11 +800,13 @@
     <string name="dns_result_not_tested">Not tested yet</string>
     <string name="dns_apply_button">Use this DNS for Xray</string>
     <string name="dns_selected_confirmation">Selected DNS: %1$s. Return to the main screen to restart the service.</string>
-    <string name="gaming_mode_description">Enable Gaming Mode and run a 10-sample network-quality check.</string>
+    <string name="gaming_mode_description">Automatically test DNS providers on this network, select the fastest successful result, and measure response variation.</string>
     <string name="gaming_test_button">Run 10-sample test</string>
     <string name="gaming_average">Average HTTPS response: %1$d ms</string>
     <string name="gaming_jitter">Response variation estimate: %1$d ms</string>
     <string name="gaming_loss">Failed requests: %1$d%%</string>
-    <string name="gaming_measurement_note">These are HTTPS probe timings, not ICMP ping or in-game latency. Results depend on your current network and VPN route.</string>
+    <string name="gaming_measurement_note">DNS optimization and HTTPS tests are network-specific. These timings are not ICMP ping or actual in-game latency, and results can vary by game and route.</string>
+    <string name="gaming_dns_selected">DNS selected for Gaming Mode: %1$s</string>
+    <string name="gaming_dns_unavailable">No tested DNS provider responded successfully. Your previous DNS setting was kept.</string>
     <string name="telegram_proxy_title">PT · Telegram Proxy</string>
 </resources>
