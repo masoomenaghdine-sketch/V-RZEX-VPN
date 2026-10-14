@@ -63,6 +63,8 @@ sealed interface MainAction {
     data object ImportConfigLocal : MainAction
     /** Create a ready-to-connect AI_CON profile using the bundled Aether/Psiphon engine. */
     data object GenerateAiConfig : MainAction
+    data object OpenDnsLab : MainAction
+    data object OpenGamingMode : MainAction
     data class ImportManually(val type: Int) : MainAction
     data object RestartService : MainAction
     data object LocateSelectedServer : MainAction
