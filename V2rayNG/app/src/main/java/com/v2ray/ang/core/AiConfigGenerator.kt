@@ -32,13 +32,16 @@ internal object AiConfigGenerator {
         // TCP-friendly profile on restricted/metered links, then prefer VLESS+Reality.
         val measured = stored.filter { it.pingMillis > 0L }
         val pool = if (measured.isNotEmpty()) measured else stored
-        return pool.sortedWith(
-            compareBy<Candidate> { if (snapshot.constrained && usesDatagramTransport(it.profile)) 1 else 0 }
-                .thenBy { it.pingMillis.takeIf { ping -> ping > 0L } ?: Long.MAX_VALUE }
+        return rankCandidates(pool, snapshot)
+    }
+
+    internal fun rankCandidates(candidates: List<Candidate>, snapshot: AiNetworkSnapshot): Candidate? =
+        candidates.sortedWith(
+            compareBy<Candidate> { it.pingMillis.takeIf { ping -> ping > 0L } ?: Long.MAX_VALUE }
+                .thenBy { if (snapshot.constrained && usesDatagramTransport(it.profile)) 1 else 0 }
                 .thenByDescending { isVlessReality(it.profile) }
                 .thenByDescending { protocolPriority(it.profile) }
         ).firstOrNull()
-    }
 
     internal fun isUsableXrayProfile(profile: ProfileItem): Boolean {
         val host = profile.server?.trim().orEmpty()
