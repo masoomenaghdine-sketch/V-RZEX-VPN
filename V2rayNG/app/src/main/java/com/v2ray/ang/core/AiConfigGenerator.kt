@@ -40,7 +40,7 @@ internal object AiConfigGenerator {
         }
         if (stored.isEmpty()) return@coroutineScope null
 
-        // Probe a bounded, diverse shortlist concurrently so a large imported list cannot stall AI setup.
+        // Probe a bounded shortlist concurrently so a large local list cannot stall AI setup.
         val shortlist = stored.sortedWith(
             compareByDescending<Candidate> { isVlessReality(it.profile) }
                 .thenBy { it.pingMillis.takeIf { ping -> ping > 0L } ?: Long.MAX_VALUE }
@@ -85,20 +85,22 @@ internal object AiConfigGenerator {
         }
         if (stored.isEmpty()) return null
 
-        // Prefer a known-good latency result when one exists. Otherwise choose a conservative
-        // TCP-friendly profile on restricted/metered links, then prefer VLESS+Reality.
         val measured = stored.filter { it.pingMillis > 0L }
         val pool = if (measured.isNotEmpty()) measured else stored
         return rankCandidates(pool, snapshot)
     }
 
-    internal fun rankCandidates(candidates: List<Candidate>, snapshot: AiNetworkSnapshot): Candidate? =
-        candidates.sortedWith(
-            compareBy<Candidate> { it.pingMillis.takeIf { ping -> ping > 0L } ?: Long.MAX_VALUE }
-                .thenBy { if (snapshot.constrained && usesDatagramTransport(it.profile)) 1 else 0 }
+    internal fun rankCandidates(candidates: List<Candidate>, snapshot: AiNetworkSnapshot): Candidate? {
+        // Do not trust signal strength or advertised bandwidth as proof that UDP is available.
+        // Prefer TCP on constrained links, or until a real UDP endpoint probe succeeds.
+        val preferTcp = snapshot.constrained || !snapshot.udpReachable
+        return candidates.sortedWith(
+            compareBy<Candidate> { if (preferTcp && usesDatagramTransport(it.profile)) 1 else 0 }
+                .thenBy { it.pingMillis.takeIf { ping -> ping > 0L } ?: Long.MAX_VALUE }
                 .thenByDescending { isVlessReality(it.profile) }
                 .thenByDescending { protocolPriority(it.profile) }
         ).firstOrNull()
+    }
 
     internal fun isUsableXrayProfile(profile: ProfileItem): Boolean {
         val host = profile.server?.trim().orEmpty()
