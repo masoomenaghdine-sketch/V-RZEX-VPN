@@ -788,6 +788,7 @@
     <string name="network_lab_save_error">ذخیرهٔ تنظیم ناموفق بود؛ دوباره تلاش کن.</string>
     <string name="dns_lab_explanation">DNSهای امن را روی مسیر شبکهٔ فعلی آزمایش می‌کنیم. سریع‌ترین نتیجه فقط یک راهنماست؛ بهترین DNS با شبکه و برنامه تغییر می‌کند.</string>
     <string name="dns_scan_button">بررسی DNSها</string>
+    <string name="dns_auto_select_button">پیداکردن و اعمال سریع‌ترین DNS پاسخ‌گو</string>
     <string name="dns_result_success">میانهٔ %1$d میلی‌ثانیه · پاسخ ۳ از ۳</string>
     <string name="dns_result_unstable">ناپایدار یا در دسترس نیست · کمتر از ۳ پاسخ</string>
     <string name="dns_result_not_tested">هنوز آزمایش نشده</string>
