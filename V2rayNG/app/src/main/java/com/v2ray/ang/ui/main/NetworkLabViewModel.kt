@@ -49,7 +49,9 @@ class NetworkLabViewModel : ViewModel() {
     )
     val state = _state.asStateFlow()
 
-    fun scanDns() {
+    fun scanDns() = scanDns(autoApplyBest = false)
+
+    private fun scanDns(autoApplyBest: Boolean) {
         if (_state.value.isScanningDns) return
         viewModelScope.launch {
             _state.value = _state.value.copy(isScanningDns = true, error = null)
@@ -78,7 +80,29 @@ class NetworkLabViewModel : ViewModel() {
                 }.sortedWith(compareBy<DnsResolverResult> { it.successful != true }
                     .thenBy { it.latencyMs ?: Long.MAX_VALUE })
             }
-            _state.value = _state.value.copy(resolvers = results, isScanningDns = false)
+
+            var selectedDns = _state.value.selectedDns
+            var error: String? = null
+            if (autoApplyBest) {
+                val best = results.firstOrNull {
+                    it.successful == true && it.latencyMs != null &&
+                        it.coreAddress.startsWith("https://", ignoreCase = true)
+                }
+                if (best == null) {
+                    error = "no_dns"
+                } else if (MmkvManager.encodeSettings(AppConfig.PREF_REMOTE_DNS, best.coreAddress)) {
+                    SettingsChangeManager.notifySettingChanged(AppConfig.PREF_REMOTE_DNS)
+                    selectedDns = best.coreAddress
+                } else {
+                    error = "save_error"
+                }
+            }
+            _state.value = _state.value.copy(
+                resolvers = results,
+                isScanningDns = false,
+                selectedDns = selectedDns,
+                error = error,
+            )
         }
     }
 
@@ -99,6 +123,9 @@ class NetworkLabViewModel : ViewModel() {
         val stored = MmkvManager.encodeSettings(AppConfig.PREF_GAMING_MODE, enabled)
         if (stored) {
             _state.value = _state.value.copy(gamingEnabled = enabled, error = null)
+            // Enabling Gaming Mode is an explicit request to optimize DNS for this network.
+            // Use only a resolver that returned successful test responses.
+            if (enabled) scanDns(autoApplyBest = true)
         } else {
             _state.value = _state.value.copy(error = "save_error")
         }
