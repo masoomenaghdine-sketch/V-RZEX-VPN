@@ -799,6 +799,7 @@
     <string name="dns_result_unstable">Unstable or unreachable · fewer than 3 responses</string>
     <string name="dns_result_not_tested">Not tested yet</string>
     <string name="dns_apply_button">Use this DNS for Xray</string>
+    <string name="dns_selected_confirmation">Selected DNS: %1$s. Return to the main screen to restart the service.</string>
     <string name="gaming_mode_description">Enable Gaming Mode and run a 10-sample network-quality check.</string>
     <string name="gaming_test_button">Run 10-sample test</string>
     <string name="gaming_average">Average HTTPS response: %1$d ms</string>
