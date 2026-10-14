@@ -164,8 +164,47 @@ class MainActivity : HelperBaseComponentActivity() {
     }
 
     private fun startAiConfigQuickSetup() {
-        // Aether/Psiphon has a bundled server bootstrap and does not need a user-supplied Xray link.
-        // Saving the generated profile returns through profileEditorLauncher, which selects it and starts VPN.
+        // Prefer a real, already stored Xray endpoint (especially a working VLESS+Reality profile).
+        // AI_CON is generated locally from that endpoint; no config feed or remote collector is queried.
+        val snapshot = com.v2ray.ang.core.AiNetworkAdvisor.assess(this)
+        val candidate = com.v2ray.ang.core.AiConfigGenerator.bestLocalXrayProfile(snapshot)
+        if (candidate != null) {
+            runCatching {
+                val source = candidate.profile
+                val localAiGuid = MmkvManager.decodeAllServerList().firstOrNull { guid ->
+                    val profile = MmkvManager.decodeServerConfig(guid)
+                    profile?.remarks.equals("AI_CON", ignoreCase = true) &&
+                        profile?.subscriptionId == AppConfig.DEFAULT_SUBSCRIPTION_ID
+                }
+                val generated = if (source.remarks.equals("AI_CON", ignoreCase = true) &&
+                    source.subscriptionId == AppConfig.DEFAULT_SUBSCRIPTION_ID
+                ) {
+                    candidate.guid
+                } else {
+                    val aiProfile = source.copy(
+                        remarks = "AI_CON",
+                        subscriptionId = AppConfig.DEFAULT_SUBSCRIPTION_ID,
+                        addedTime = System.currentTimeMillis(),
+                    )
+                    if (localAiGuid != null) {
+                        MmkvManager.encodeServerConfig(localAiGuid, aiProfile)
+                    } else {
+                        MmkvManager.encodeServerConfig("", aiProfile)
+                    }
+                }
+                mainViewModel.updateSelectedGuid(generated)
+                mainViewModel.onAction(MainAction.RefreshGroups)
+                LauncherManager.restartServiceOrStart(this, ::requestServiceStart)
+                toastSuccess(R.string.ai_config_xray_selected)
+                return
+            }.onFailure { error ->
+                LogUtil.e(AppConfig.TAG, "AI_CON could not store the locally generated Xray profile", error)
+                toastError(R.string.toast_failure)
+            }
+        }
+
+        // No usable local Xray endpoint? Use the independent Aether bootstrap already shipped with the app.
+        // VLESS+Reality cannot be invented without a real server and its matching keys.
         pendingAetherQuickConnect = true
         profileEditorLauncher.launch(
             Intent(this, ServerAetherActivity::class.java)
