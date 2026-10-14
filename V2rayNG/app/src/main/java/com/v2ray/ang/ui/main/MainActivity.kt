@@ -164,52 +164,54 @@ class MainActivity : HelperBaseComponentActivity() {
     }
 
     private fun startAiConfigQuickSetup() {
-        // Prefer a real, already stored Xray endpoint (especially a working VLESS+Reality profile).
-        // AI_CON is generated locally from that endpoint; no config feed or remote collector is queried.
-        val snapshot = com.v2ray.ang.core.AiNetworkAdvisor.assess(this)
-        val candidate = com.v2ray.ang.core.AiConfigGenerator.bestLocalXrayProfile(snapshot)
-        if (candidate != null) {
-            runCatching {
-                val source = candidate.profile
-                val localAiGuid = MmkvManager.decodeAllServerList().firstOrNull { guid ->
-                    val profile = MmkvManager.decodeServerConfig(guid)
-                    profile?.remarks.equals("AI_CON", ignoreCase = true) &&
-                        profile?.subscriptionId == AppConfig.DEFAULT_SUBSCRIPTION_ID
-                }
-                val generated = if (source.remarks.equals("AI_CON", ignoreCase = true) &&
-                    source.subscriptionId == AppConfig.DEFAULT_SUBSCRIPTION_ID
-                ) {
-                    candidate.guid
-                } else {
-                    val aiProfile = source.copy(
-                        remarks = "AI_CON",
-                        subscriptionId = AppConfig.DEFAULT_SUBSCRIPTION_ID,
-                        addedTime = System.currentTimeMillis(),
-                    )
-                    if (localAiGuid != null) {
-                        MmkvManager.encodeServerConfig(localAiGuid, aiProfile)
-                    } else {
-                        MmkvManager.encodeServerConfig("", aiProfile)
+        // AI_CON uses only locally stored Xray profiles; it never imports a feed or fabricates server credentials.
+        // Probe TCP reachability and handshake latency off the main thread before selecting a candidate.
+        lifecycleScope.launch {
+            val snapshot = com.v2ray.ang.core.AiNetworkAdvisor.assess(this@MainActivity)
+            val candidate = com.v2ray.ang.core.AiConfigGenerator.bestReachableLocalXrayProfile(snapshot)
+            if (candidate != null) {
+                runCatching {
+                    val source = candidate.profile
+                    val localAiGuid = MmkvManager.decodeAllServerList().firstOrNull { guid ->
+                        val profile = MmkvManager.decodeServerConfig(guid)
+                        profile?.remarks.equals("AI_CON", ignoreCase = true) &&
+                            profile?.subscriptionId == AppConfig.DEFAULT_SUBSCRIPTION_ID
                     }
+                    val generated = if (source.remarks.equals("AI_CON", ignoreCase = true) &&
+                        source.subscriptionId == AppConfig.DEFAULT_SUBSCRIPTION_ID
+                    ) {
+                        candidate.guid
+                    } else {
+                        val aiProfile = source.copy(
+                            remarks = "AI_CON",
+                            subscriptionId = AppConfig.DEFAULT_SUBSCRIPTION_ID,
+                            addedTime = System.currentTimeMillis(),
+                        )
+                        if (localAiGuid != null) {
+                            MmkvManager.encodeServerConfig(localAiGuid, aiProfile)
+                        } else {
+                            MmkvManager.encodeServerConfig("", aiProfile)
+                        }
+                    }
+                    mainViewModel.updateSelectedGuid(generated)
+                    mainViewModel.onAction(MainAction.RefreshGroups)
+                    LauncherManager.restartServiceOrStart(this@MainActivity, ::requestServiceStart)
+                    toastSuccess(R.string.ai_config_xray_selected)
+                    return@launch
+                }.onFailure { error ->
+                    LogUtil.e(AppConfig.TAG, "AI_CON could not store the locally generated Xray profile", error)
+                    toastError(R.string.toast_failure)
                 }
-                mainViewModel.updateSelectedGuid(generated)
-                mainViewModel.onAction(MainAction.RefreshGroups)
-                LauncherManager.restartServiceOrStart(this, ::requestServiceStart)
-                toastSuccess(R.string.ai_config_xray_selected)
-                return
-            }.onFailure { error ->
-                LogUtil.e(AppConfig.TAG, "AI_CON could not store the locally generated Xray profile", error)
-                toastError(R.string.toast_failure)
             }
-        }
 
-        // No usable local Xray endpoint? Use the independent Aether bootstrap already shipped with the app.
-        // VLESS+Reality cannot be invented without a real server and its matching keys.
-        pendingAetherQuickConnect = true
-        profileEditorLauncher.launch(
-            Intent(this, ServerAetherActivity::class.java)
-                .putExtra(ServerAetherActivity.EXTRA_AI_QUICK_SETUP, true)
-        )
+            // If no locally stored Xray endpoint passes the live TCP probe, use the bundled Aether
+            // bootstrap path. This path is independent of imported Xray profiles and may use Psiphon/Tor.
+            pendingAetherQuickConnect = true
+            profileEditorLauncher.launch(
+                Intent(this@MainActivity, ServerAetherActivity::class.java)
+                    .putExtra(ServerAetherActivity.EXTRA_AI_QUICK_SETUP, true)
+            )
+        }
     }
 
     private fun shareToClipboard(guid: String): Boolean =
