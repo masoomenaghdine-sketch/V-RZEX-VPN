@@ -82,11 +82,11 @@ private fun NetworkLabScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Button(onClick = onBack) { Text(stringResource(R.string.action_back)) }
+                Button(onClick = onBack) { Text(stringResource(R.string.network_lab_back)) }
             }
 
             if (gamingTab) {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                     Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(modifier = Modifier.weight(1f)) {
@@ -155,7 +155,7 @@ private fun NetworkLabScreen(
                 }
             }
             state.error?.let {
-                Text(it, color = MaterialTheme.colorScheme.error)
+                Text(stringResource(R.string.network_lab_save_error), color = MaterialTheme.colorScheme.error)
             }
         }
     }
