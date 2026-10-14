@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.v2ray.ang.ui.base.BaseComponentActivity
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.URL
@@ -56,7 +58,7 @@ class TelegramProxyActivity : BaseComponentActivity() {
                 )
                 Button(onClick = { refreshProxies() }, enabled = !loading, modifier = Modifier.fillMaxWidth()) {
                     if (loading) CircularProgressIndicator()
-                    else Text("جست‌وجو و به‌روزرسانی پروکسی‌ها")
+                    else Text("جست‌وجوی فهرست و کانال‌ها")
                 }
                 if (status.isNotBlank()) Text(status, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
@@ -72,7 +74,7 @@ class TelegramProxyActivity : BaseComponentActivity() {
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("منبع فهرست MTProto") }
                 Text(
-                    "برای استفاده، یک پروکسی را انتخاب کنید تا تلگرام آن را باز کند. پروکسی‌های عمومی ممکن است آفلاین یا غیرقابل‌اعتماد باشند.",
+                    "فهرست عمومی و پیش‌نمایش پست‌های قابل‌دسترسی این دو کانال بررسی می‌شوند. پروکسی عمومی ممکن است آفلاین یا غیرقابل‌اعتماد باشد.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -97,34 +99,47 @@ class TelegramProxyActivity : BaseComponentActivity() {
     private fun refreshProxies() {
         if (loading) return
         loading = true
-        status = "در حال دریافت فهرست عمومی…"
+        status = "در حال جست‌وجوی منابع عمومی…"
         lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) {
                 runCatching {
-                    val connection: URLConnection = URL(PROXY_FEED_URL).openConnection()
-                    connection.connectTimeout = 8000
-                    connection.readTimeout = 8000
-                    connection.getInputStream().bufferedReader(Charsets.UTF_8).use { it.readText() }
-                        .lineSequence()
-                        .map { it.trim() }
-                        .filter { it.startsWith("tg://proxy?", true) || it.startsWith("https://t.me/proxy?", true) || it.startsWith("http://t.me/proxy?", true) }
-                        .distinct()
-                        .take(100)
-                        .toList()
+                    val sources = listOf(
+                        PROXY_FEED_URL,
+                        "https://t.me/s/PeopleProxy",
+                        "https://t.me/s/iRoProxy"
+                    )
+                    sources.map { source ->
+                        async(Dispatchers.IO) { readSource(source) }
+                    }.awaitAll().flatten().distinct().take(150)
                 }
             }
             loading = false
             result.onSuccess { found ->
                 proxies = found
                 status = if (found.isEmpty()) {
-                    "در فهرست منبع فعلاً پروکسی قابل‌خواندن پیدا نشد؛ کانال‌های بالا را هم می‌توانی بررسی کنی."
+                    "پروکسی قابل‌استخراج پیدا نشد؛ ممکن است منبع خالی یا دسترسی به پیش‌نمایش کانال‌ها محدود باشد."
                 } else {
-                    "تعداد ${found.size} لینک پروکسی دریافت شد؛ فعال‌بودن آن‌ها هنوز تضمین نشده است."
+                    "تعداد ${found.size} لینک یکتا پیدا شد؛ فعال‌بودن آن‌ها هنوز تأیید نشده است."
                 }
             }.onFailure {
-                status = "دریافت فهرست ناموفق بود. اتصال اینترنت را بررسی کن یا از کانال‌های بالا استفاده کن."
+                status = "جست‌وجو ناموفق بود. اینترنت را بررسی کن یا کانال‌ها را جداگانه باز کن."
             }
         }
+    }
+
+    private fun readSource(source: String): List<String> {
+        val connection: URLConnection = URL(source).openConnection()
+        connection.connectTimeout = 7000
+        connection.readTimeout = 7000
+        connection.setRequestProperty("User-Agent", "Mozilla/5.0 VORZEX-PT")
+        val body = connection.getInputStream().bufferedReader(Charsets.UTF_8).use { it.readText() }
+            .replace("&amp;", "&")
+            .replace("&#38;", "&")
+        return PROXY_LINK.findAll(body)
+            .map { it.value.trimEnd('.', ',', ')', ']', ';') }
+            .filter { it.contains("server=") && it.contains("port=") && it.contains("secret=") }
+            .distinct()
+            .toList()
     }
 
     private fun openUrl(value: String) {
@@ -138,5 +153,6 @@ class TelegramProxyActivity : BaseComponentActivity() {
     companion object {
         private const val PROXY_FEED_URL =
             "https://raw.githubusercontent.com/SoliSpirit/mtproto/master/all_proxies.txt"
+        private val PROXY_LINK = Regex("""(?:tg://proxy\\?[^"'<>\\s]+|https?://t\\.me/proxy\\?[^"'<>\\s]+)""", RegexOption.IGNORE_CASE)
     }
 }
