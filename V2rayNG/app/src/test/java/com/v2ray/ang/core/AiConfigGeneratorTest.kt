@@ -24,6 +24,18 @@ class AiConfigGeneratorTest {
         }
     )
 
+    private fun hysteria(guid: String, ping: Long) = AiConfigGenerator.Candidate(
+        guid = guid,
+        pingMillis = ping,
+        profile = ProfileItem.create(EConfigType.HYSTERIA2).apply {
+            remarks = guid
+            server = "$guid.example.net"
+            serverPort = "443"
+            password = "valid-test-password"
+            network = "udp"
+        }
+    )
+
     @Test
     fun lowestMeasuredPingWinsAmongKnownWorkingCandidates() {
         val snapshot = AiNetworkSnapshot(
@@ -34,6 +46,36 @@ class AiConfigGeneratorTest {
             snapshot
         )
         assertEquals("fast", result?.guid)
+    }
+
+    @Test
+    fun tcpIsPreferredOverFasterUdpOnConstrainedNetwork() {
+        val snapshot = AiNetworkSnapshot(
+            cellular = true, metered = true, downstreamKbps = 8000, upstreamKbps = 1000, signalDbm = -95
+        )
+        val result = AiConfigGenerator.rankCandidates(
+            listOf(hysteria("udp-fast", 12), reality("tcp-stable", 65)),
+            snapshot
+        )
+        assertEquals("tcp-stable", result?.guid)
+    }
+
+    @Test
+    fun verifiedUdpCanWinOnStrongUnmeteredWifi() {
+        val snapshot = AiNetworkSnapshot(
+            cellular = false,
+            metered = false,
+            downstreamKbps = 50_000,
+            upstreamKbps = 10_000,
+            signalDbm = -60,
+            wifi = true,
+            udpReachable = true,
+        )
+        val result = AiConfigGenerator.rankCandidates(
+            listOf(reality("tcp", 60), hysteria("udp", 18)),
+            snapshot
+        )
+        assertEquals("udp", result?.guid)
     }
 
     @Test
