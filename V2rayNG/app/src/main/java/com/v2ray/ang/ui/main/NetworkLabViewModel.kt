@@ -1,5 +1,6 @@
 package com.v2ray.ang.ui.main
 
+import android.net.Uri
 import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -7,6 +8,9 @@ import com.v2ray.ang.AppConfig
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SettingsChangeManager
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -14,6 +18,7 @@ import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.math.abs
+import kotlin.math.max
 
 data class DnsResolverResult(
     val name: String,
@@ -49,16 +54,27 @@ class NetworkLabViewModel : ViewModel() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isScanningDns = true, error = null)
             val results = withContext(Dispatchers.IO) {
-                defaultResolvers.map { resolver ->
-                    val samples = mutableListOf<Long>()
-                    repeat(3) {
-                        val elapsed = probeHttp(resolver.testUrl, timeoutMs = 2200)
-                        if (elapsed != null) samples += elapsed
-                    }
-                    resolver.copy(
-                        latencyMs = samples.sorted().getOrNull(samples.size / 2),
-                        successful = samples.size == 3,
-                    )
+                // Keep the three well-known choices, then sample across the community DoH list.
+                // A remote list is untrusted input: accept HTTPS URLs only and cap the scan size.
+                val discovered = fetchPublicDohResolvers()
+                val candidates = (defaultResolvers + discovered)
+                    .distinctBy { it.coreAddress }
+                    .take(MAX_RESOLVERS_PER_SCAN)
+                coroutineScope {
+                    candidates.map { resolver ->
+                        async {
+                            val attempts = if (resolver.coreAddress in defaultResolvers.map { it.coreAddress }) 2 else 1
+                            val samples = mutableListOf<Long>()
+                            repeat(attempts) {
+                                val elapsed = probeHttp(resolver.testUrl, timeoutMs = 1800)
+                                if (elapsed != null) samples += elapsed
+                            }
+                            resolver.copy(
+                                latencyMs = samples.sorted().getOrNull(samples.size / 2),
+                                successful = samples.size == attempts,
+                            )
+                        }
+                    }.awaitAll()
                 }.sortedWith(compareBy<DnsResolverResult> { it.successful != true }
                     .thenBy { it.latencyMs ?: Long.MAX_VALUE })
             }
@@ -67,7 +83,9 @@ class NetworkLabViewModel : ViewModel() {
     }
 
     fun applyDns(coreAddress: String) {
-        val resolver = defaultResolvers.firstOrNull { it.coreAddress == coreAddress } ?: return
+        val resolver = _state.value.resolvers.firstOrNull {
+            it.coreAddress == coreAddress && it.coreAddress.startsWith("https://")
+        } ?: return
         val stored = MmkvManager.encodeSettings(AppConfig.PREF_REMOTE_DNS, resolver.coreAddress)
         if (!stored) {
             _state.value = _state.value.copy(error = "save_error")
@@ -112,6 +130,60 @@ class NetworkLabViewModel : ViewModel() {
         }
     }
 
+    private fun fetchPublicDohResolvers(): List<DnsResolverResult> {
+        val connection = try {
+            (URL(PUBLIC_DOH_LIST_URL).openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = 2500
+                readTimeout = 2500
+                instanceFollowRedirects = true
+                setRequestProperty("Accept", "text/plain")
+                useCaches = false
+            }
+        } catch (_: Exception) {
+            return emptyList()
+        }
+
+        return try {
+            if (connection.responseCode !in 200..299) return emptyList()
+            val endpoints = connection.inputStream.bufferedReader().useLines { lines ->
+                val valid = lines.map { it.trim() }
+                    .filter { it.startsWith("https://", ignoreCase = true) }
+                    .distinct()
+                    .toList()
+                if (valid.isEmpty()) {
+                    emptyList()
+                } else {
+                    // Spread the sample across the list instead of only testing its alphabetic beginning.
+                    val step = max(1, valid.size / COMMUNITY_RESOLVERS_PER_SCAN)
+                    valid.filterIndexed { index, _ -> index % step == 0 }
+                        .take(COMMUNITY_RESOLVERS_PER_SCAN)
+                }
+            }
+            endpoints.mapNotNull { endpoint ->
+                val uri = runCatching { Uri.parse(endpoint) }.getOrNull() ?: return@mapNotNull null
+                val host = uri.host?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                if (uri.scheme != "https" || host.equals("localhost", ignoreCase = true)) {
+                    return@mapNotNull null
+                }
+                DnsResolverResult(
+                    name = host,
+                    description = "Community DoH · tested on this network",
+                    coreAddress = endpoint,
+                    testUrl = uri.buildUpon()
+                        .appendQueryParameter("name", "example.com")
+                        .appendQueryParameter("type", "A")
+                        .build()
+                        .toString(),
+                )
+            }
+        } catch (_: Exception) {
+            emptyList()
+        } finally {
+            connection.disconnect()
+        }
+    }
+
     private fun probeHttp(url: String, timeoutMs: Int): Long? {
         val start = SystemClock.elapsedRealtime()
         return try {
@@ -145,6 +217,11 @@ class NetworkLabViewModel : ViewModel() {
     }
 
     companion object {
+        private const val PUBLIC_DOH_LIST_URL =
+            "https://raw.githubusercontent.com/10ium/Public-DNS-Collector/main/lists/doh.txt"
+        private const val COMMUNITY_RESOLVERS_PER_SCAN = 18
+        private const val MAX_RESOLVERS_PER_SCAN = 21
+
         val defaultResolvers = listOf(
             DnsResolverResult(
                 name = "Cloudflare",
