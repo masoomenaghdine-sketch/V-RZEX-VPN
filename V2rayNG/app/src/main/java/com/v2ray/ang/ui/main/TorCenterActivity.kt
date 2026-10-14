@@ -99,11 +99,13 @@ class TorCenterActivity : HelperBaseComponentActivity() {
     }
 
     private fun openEditor(bridgeMode: String) {
-        startActivity(
-            Intent(this, ServerAetherActivity::class.java)
-                .putExtra(ServerAetherActivity.EXTRA_TOR_QUICK_SETUP, true)
-                .putExtra(ServerAetherActivity.EXTRA_TOR_BRIDGE_MODE, bridgeMode)
+        // Return the selected preset to MainActivity. MainActivity then opens the profile editor
+        // through its existing result launcher, preserving the established save-and-connect flow.
+        setResult(
+            RESULT_OK,
+            Intent().putExtra(ServerAetherActivity.EXTRA_TOR_BRIDGE_MODE, bridgeMode)
         )
+        finish()
     }
 }
 
