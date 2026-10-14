@@ -70,7 +70,7 @@ class NetworkLabViewModel : ViewModel() {
         val resolver = defaultResolvers.firstOrNull { it.coreAddress == coreAddress } ?: return
         val stored = MmkvManager.encodeSettings(AppConfig.PREF_REMOTE_DNS, resolver.coreAddress)
         if (!stored) {
-            _state.value = _state.value.copy(error = "Could not save DNS setting.")
+            _state.value = _state.value.copy(error = "save_error")
             return
         }
         SettingsChangeManager.notifySettingChanged(AppConfig.PREF_REMOTE_DNS)
@@ -82,7 +82,7 @@ class NetworkLabViewModel : ViewModel() {
         if (stored) {
             _state.value = _state.value.copy(gamingEnabled = enabled, error = null)
         } else {
-            _state.value = _state.value.copy(error = "Could not save Gaming Mode.")
+            _state.value = _state.value.copy(error = "save_error")
         }
     }
 
@@ -128,7 +128,10 @@ class NetworkLabViewModel : ViewModel() {
                 val code = connection.responseCode
                 if (code in 200..299) {
                     // Read a small response body so the result includes the resolver's actual answer.
-                    connection.inputStream.use { input -> input.readNBytes(512) }
+                    connection.inputStream.use { input ->
+                        val buffer = ByteArray(512)
+                        input.read(buffer)
+                    }
                     SystemClock.elapsedRealtime() - start
                 } else {
                     null
