@@ -793,11 +793,13 @@
     <string name="dns_result_not_tested">هنوز آزمایش نشده</string>
     <string name="dns_apply_button">استفاده از این DNS در Xray</string>
     <string name="dns_selected_confirmation">DNS انتخاب‌شده: %1$s. برای اعمال، به صفحهٔ اصلی برگرد تا سرویس راه‌اندازی مجدد شود.</string>
-    <string name="gaming_mode_description">حالت گیمینگ را فعال کن و آزمون کیفیت شبکه با ۱۰ نمونه بگیر.</string>
+    <string name="gaming_mode_description">دی‌ان‌اس‌های این شبکه را خودکار آزمایش می‌کند، سریع‌ترین گزینهٔ پاسخ‌گو را انتخاب می‌کند و نوسان پاسخ را می‌سنجد.</string>
     <string name="gaming_test_button">آزمون ۱۰ مرحله‌ای</string>
     <string name="gaming_average">میانگین پاسخ HTTPS: %1$d میلی‌ثانیه</string>
     <string name="gaming_jitter">برآورد نوسان پاسخ: %1$d میلی‌ثانیه</string>
     <string name="gaming_loss">درخواست‌های ناموفق: %1$d%%</string>
-    <string name="gaming_measurement_note">این اعداد زمان پاسخ HTTPS هستند، نه پینگ ICMP یا پینگ سرور بازی. نتیجه به شبکه و مسیر VPN فعلی بستگی دارد.</string>
+    <string name="gaming_measurement_note">بهینه‌سازی DNS و آزمون HTTPS مخصوص شبکهٔ فعلی است. این اعداد پینگ ICMP یا پینگ واقعی داخل بازی نیستند و با بازی و مسیر اتصال تغییر می‌کنند.</string>
+    <string name="gaming_dns_selected">DNS انتخاب‌شده برای حالت گیمینگ: %1$s</string>
+    <string name="gaming_dns_unavailable">هیچ DNS آزمایش‌شده‌ای پاسخ موفق نداد؛ تنظیم قبلی DNS حفظ شد.</string>
     <string name="telegram_proxy_title">PT · پروکسی تلگرام</string>
 </resources>
