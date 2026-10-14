@@ -28,7 +28,14 @@ internal object AiConfigGenerator {
      * and handshake-latency signal, not a guarantee that authentication or the full VPN tunnel works.
      * No profiles are downloaded and no credentials are sent to any new endpoint beyond a TCP connect.
      */
-    suspend fun bestReachableLocalXrayProfile(snapshot: AiNetworkSnapshot): Candidate? = coroutineScope {
+    suspend fun bestReachableLocalXrayProfile(snapshot: AiNetworkSnapshot): Candidate? =
+        rankedReachableLocalXrayProfiles(snapshot).firstOrNull()
+
+    /**
+     * Returns a bounded, ranked list of reachable local profiles so Auto-Connect can verify
+     * real tunneled traffic on one candidate and move to the next if that tunnel is unusable.
+     */
+    suspend fun rankedReachableLocalXrayProfiles(snapshot: AiNetworkSnapshot): List<Candidate> = coroutineScope {
         val stored = MmkvManager.decodeAllServerList().distinct().mapNotNull { guid ->
             val profile = MmkvManager.decodeServerConfig(guid) ?: return@mapNotNull null
             if (!isUsableXrayProfile(profile)) return@mapNotNull null
@@ -37,8 +44,17 @@ internal object AiConfigGenerator {
                 profile = profile,
                 pingMillis = MmkvManager.decodeServerAffiliationInfo(guid)?.testDelayMillis ?: 0L,
             )
+        }.distinctBy { candidate ->
+            listOf(
+                candidate.profile.configType,
+                candidate.profile.server.orEmpty().trim().lowercase(),
+                candidate.profile.serverPort.orEmpty(),
+                candidate.profile.security.orEmpty().lowercase(),
+                candidate.profile.network.orEmpty().lowercase(),
+                candidate.profile.password.orEmpty(),
+            ).joinToString("|")
         }
-        if (stored.isEmpty()) return@coroutineScope null
+        if (stored.isEmpty()) return@coroutineScope emptyList()
 
         // Probe a bounded shortlist concurrently so a large local list cannot stall AI setup.
         val shortlist = stored.sortedWith(
@@ -53,7 +69,7 @@ internal object AiConfigGenerator {
             }
         }.awaitAll().filterNotNull()
 
-        rankCandidates(reachable, snapshot)
+        rankedCandidates(reachable, snapshot)
     }
 
     private fun tcpHandshakeLatency(host: String, portText: String): Long? {
@@ -90,7 +106,10 @@ internal object AiConfigGenerator {
         return rankCandidates(pool, snapshot)
     }
 
-    internal fun rankCandidates(candidates: List<Candidate>, snapshot: AiNetworkSnapshot): Candidate? {
+    internal fun rankCandidates(candidates: List<Candidate>, snapshot: AiNetworkSnapshot): Candidate? =
+        rankedCandidates(candidates, snapshot).firstOrNull()
+
+    internal fun rankedCandidates(candidates: List<Candidate>, snapshot: AiNetworkSnapshot): List<Candidate> {
         // Do not trust signal strength or advertised bandwidth as proof that UDP is available.
         // Prefer TCP on constrained links, or until a real UDP endpoint probe succeeds.
         val preferTcp = snapshot.constrained || !snapshot.udpReachable
@@ -99,7 +118,7 @@ internal object AiConfigGenerator {
                 .thenBy { it.pingMillis.takeIf { ping -> ping > 0L } ?: Long.MAX_VALUE }
                 .thenByDescending { isVlessReality(it.profile) }
                 .thenByDescending { protocolPriority(it.profile) }
-        ).firstOrNull()
+        )
     }
 
     internal fun isUsableXrayProfile(profile: ProfileItem): Boolean {
