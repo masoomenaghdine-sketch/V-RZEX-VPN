@@ -272,7 +272,12 @@ class MainActivity : HelperBaseComponentActivity() {
                             }
                         }
                         if (generatedResult.isFailure) {
-                            LogUtil.e(AppConfig.TAG, "AI_CON could not save candidate ${candidate.guid}", generatedResult.exceptionOrNull())
+                            val saveError = generatedResult.exceptionOrNull()
+                            if (saveError != null) {
+                                LogUtil.e(AppConfig.TAG, "AI_CON could not save candidate ${candidate.guid}", saveError)
+                            } else {
+                                LogUtil.w(AppConfig.TAG, "AI_CON could not save candidate ${candidate.guid}; no exception details available")
+                            }
                             continue
                         }
                         val generatedGuid = generatedResult.getOrThrow()
