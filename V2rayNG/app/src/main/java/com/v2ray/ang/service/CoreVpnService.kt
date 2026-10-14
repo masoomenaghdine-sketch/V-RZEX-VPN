@@ -238,14 +238,17 @@ class CoreVpnService : VpnService(), ServiceControl {
             builder.addRoute("0.0.0.0", 0)
         }
 
-        // Configure IPv6 if enabled
-        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_IPV6_ENABLED) == true) {
-            builder.addAddress(vpnConfig.ipv6Client, 126)
-            if (bypassLan) {
-                builder.addRoute("2000::", 3) // Currently only 1/8 of total IPv6 is in use
-            } else {
-                builder.addRoute("::", 0)
-            }
+        // Always capture IPv6 in the VPN interface. If IPv6 transport is disabled in the
+        // core settings, route it into the TUN anyway so it is not allowed to escape directly
+        // through the physical network. In that mode IPv6 may be unavailable (fail-closed),
+        // which is safer than silently leaking the device's real IPv6 address.
+        builder.addAddress(vpnConfig.ipv6Client, 126)
+        val ipv6Enabled = MmkvManager.decodeSettingsBool(AppConfig.PREF_IPV6_ENABLED) == true
+        if (ipv6Enabled && bypassLan) {
+            builder.addRoute("2000::", 3) // Currently only 1/8 of total IPv6 is in use
+        } else {
+            // Full IPv6 route also acts as a leak guard when IPv6 transport is disabled.
+            builder.addRoute("::", 0)
         }
 
         // Configure DNS servers
