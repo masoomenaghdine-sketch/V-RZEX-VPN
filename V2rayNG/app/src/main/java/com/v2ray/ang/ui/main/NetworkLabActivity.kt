@@ -42,6 +42,7 @@ class NetworkLabActivity : BaseComponentActivity() {
             gamingTab = tab == TAB_GAMING,
             onBack = { finish() },
             onScanDns = viewModel::scanDns,
+            onAutoSelectBestDns = viewModel::scanAndApplyBestDns,
             onApplyDns = viewModel::applyDns,
             onGamingToggle = viewModel::setGamingEnabled,
             onTestGaming = viewModel::testGamingNetwork,
@@ -61,6 +62,7 @@ private fun NetworkLabScreen(
     gamingTab: Boolean,
     onBack: () -> Unit,
     onScanDns: () -> Unit,
+    onAutoSelectBestDns: () -> Unit,
     onApplyDns: (String) -> Unit,
     onGamingToggle: (Boolean) -> Unit,
     onTestGaming: () -> Unit,
@@ -150,6 +152,13 @@ private fun NetworkLabScreen(
                     if (state.isScanningDns) CircularProgressIndicator()
                     else Text(stringResource(R.string.dns_scan_button))
                 }
+                Button(
+                    onClick = onAutoSelectBestDns,
+                    enabled = !state.isScanningDns,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.dns_auto_select_button))
+                }
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.weight(1f)) {
                     items(state.resolvers, key = { it.coreAddress }) { resolver ->
                         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
@@ -176,8 +185,13 @@ private fun NetworkLabScreen(
                     item { Spacer(modifier = Modifier.height(6.dp)) }
                 }
             }
-            if (state.error != null) {
-                Text(stringResource(R.string.network_lab_save_error), color = MaterialTheme.colorScheme.error)
+            state.error?.let { error ->
+                val message = when (error) {
+                    "no_dns" -> R.string.gaming_dns_unavailable
+                    "save_error" -> R.string.network_lab_save_error
+                    else -> null
+                }
+                message?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error) }
             }
             state.selectedDns?.let {
                 Text(stringResource(R.string.dns_selected_confirmation, it), color = MaterialTheme.colorScheme.primary)
