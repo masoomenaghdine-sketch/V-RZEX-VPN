@@ -142,6 +142,14 @@ class MainActivity : HelperBaseComponentActivity() {
                     MainAction.ImportClipboard -> importClipboard()
                     MainAction.ImportConfigLocal -> importConfigLocal()
                     MainAction.GenerateAiConfig -> startAiConfigQuickSetup()
+                    MainAction.OpenDnsLab -> settingsActivityLauncher.launch(
+                        Intent(this, NetworkLabActivity::class.java)
+                            .putExtra(NetworkLabActivity.EXTRA_TAB, NetworkLabActivity.TAB_DNS)
+                    )
+                    MainAction.OpenGamingMode -> settingsActivityLauncher.launch(
+                        Intent(this, NetworkLabActivity::class.java)
+                            .putExtra(NetworkLabActivity.EXTRA_TAB, NetworkLabActivity.TAB_GAMING)
+                    )
                     is MainAction.ImportManually -> importManually(action.type)
                     MainAction.RestartService -> LauncherManager.restartServiceOrStart(this, ::requestServiceStart)
                     MainAction.LocateSelectedServer -> mainViewModel.triggerLocateSelectedServer()
