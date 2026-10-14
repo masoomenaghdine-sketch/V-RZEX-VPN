@@ -158,6 +158,36 @@ class MainActivity : HelperBaseComponentActivity() {
             }
         }
 
+        // A tunnel can stay "running" while upstream traffic has silently stopped.
+        // Check AI_CON end-to-end at a conservative interval and require two failures before failover.
+        lifecycleScope.launch {
+            while (true) {
+                delay(AI_HEALTH_CHECK_INTERVAL_MS)
+                val state = mainViewModel.uiState.value
+                val profile = state.selectedGuid?.let { MmkvManager.decodeServerConfig(it) }
+                if (!state.isRunning ||
+                    state.status !is MainStatus.Connected ||
+                    !profile?.remarks.equals("AI_CON", ignoreCase = true) ||
+                    aiAutoConnectInProgress.get()
+                ) continue
+
+                if (!com.v2ray.ang.core.AiConnectionVerifier.verifyTunnelTraffic()) {
+                    delay(AI_HEALTH_RECHECK_DELAY_MS)
+                    val latest = mainViewModel.uiState.value
+                    val latestProfile = latest.selectedGuid?.let { MmkvManager.decodeServerConfig(it) }
+                    if (latest.isRunning &&
+                        latest.status is MainStatus.Connected &&
+                        latestProfile?.remarks.equals("AI_CON", ignoreCase = true) &&
+                        !aiAutoConnectInProgress.get() &&
+                        !com.v2ray.ang.core.AiConnectionVerifier.verifyTunnelTraffic()
+                    ) {
+                        LogUtil.w(AppConfig.TAG, "AI_CON traffic check failed twice; stopping unhealthy tunnel for failover")
+                        LauncherManager.stopService(this@MainActivity)
+                    }
+                }
+            }
+        }
+
         checkAndRequestPermission(PermissionType.POST_NOTIFICATIONS) {}
     }
 
@@ -266,8 +296,9 @@ class MainActivity : HelperBaseComponentActivity() {
                                     (sawRunning && !state.isRunning)
                             }
                         }
-                        val connected = connectionState?.isRunning == true &&
-                            connectionState.status is MainStatus.Connected
+                        val connected = connectionState?.let {
+                            it.isRunning && it.status is MainStatus.Connected
+                        } == true
                         val verified = connected &&
                             com.v2ray.ang.core.AiConnectionVerifier.verifyTunnelTraffic()
 
@@ -309,6 +340,8 @@ class MainActivity : HelperBaseComponentActivity() {
         const val SERVICE_STOP_WAIT_MS = 4_000L
         const val AI_FAILOVER_RETRY_DELAY_MS = 500L
         const val AI_FAILOVER_COOLDOWN_MS = 30_000L
+        const val AI_HEALTH_CHECK_INTERVAL_MS = 30_000L
+        const val AI_HEALTH_RECHECK_DELAY_MS = 3_000L
     }
 
     private fun shareToClipboard(guid: String): Boolean =
