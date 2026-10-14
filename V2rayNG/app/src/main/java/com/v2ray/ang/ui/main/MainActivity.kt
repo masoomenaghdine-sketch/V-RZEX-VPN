@@ -236,6 +236,10 @@ class MainActivity : HelperBaseComponentActivity() {
     }
 
     private fun navigateTo(destination: MainDestination) {
+        if (destination == MainDestination.TelegramProxy) {
+            startActivity(Intent(this, TelegramProxyActivity::class.java))
+            return
+        }
         if (destination == MainDestination.Device) {
             startActivity(Intent(this, DeviceActivity::class.java))
             return
@@ -262,6 +266,7 @@ class MainActivity : HelperBaseComponentActivity() {
             MainDestination.UserAssets -> Intent(this, UserAssetActivity::class.java)
             MainDestination.Settings -> Intent(this, SettingsActivity::class.java)
             MainDestination.TorNetwork -> error("Tor Network is handled before building the settings intent")
+            MainDestination.TelegramProxy -> error("Telegram Proxy is handled before building the settings intent")
             MainDestination.Cnr -> error("CNR is handled before building the settings intent")
             MainDestination.Device -> error("Device is handled before building the settings intent")
             MainDestination.Logcat -> Intent(this, LogcatActivity::class.java)
