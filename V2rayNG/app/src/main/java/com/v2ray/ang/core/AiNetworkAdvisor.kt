@@ -19,15 +19,24 @@ internal data class AiNetworkSnapshot(
     val downstreamKbps: Int,
     val upstreamKbps: Int,
     val signalDbm: Int?,
+    val wifi: Boolean = !cellular,
+    val validated: Boolean = true,
+    val notCongested: Boolean = true,
+    val notSuspended: Boolean = true,
 ) {
     /**
-     * Prefer HTTP/3 only on a clearly strong, unmetered Wi-Fi link with known signal quality.
-     * Cellular, metered, unknown, and constrained links use HTTP/2/TCP because UDP/QUIC can be
-     * unreliable on filtered or degraded networks. This is an adaptive heuristic, not a guarantee.
+     * HTTP/3 is only selected when Android reports a validated, uncongested Wi-Fi link with
+     * adequate estimated bandwidth and signal. Cellular, metered, unknown, congested, suspended,
+     * or weak links conservatively use HTTP/2/TCP. This is a heuristic; real latency is only known
+     * after testing a reachable endpoint.
      */
     val strongUnmeteredWifi: Boolean
-        get() = !cellular &&
+        get() = wifi &&
+            !cellular &&
             !metered &&
+            validated &&
+            notCongested &&
+            notSuspended &&
             downstreamKbps >= MIN_HTTP3_DOWNSTREAM_KBPS &&
             upstreamKbps >= MIN_HTTP3_UPSTREAM_KBPS &&
             signalDbm != null &&
@@ -56,6 +65,7 @@ internal object AiNetworkAdvisor {
             null
         }
         val cellular = capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) == true
+        val wifi = capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
         val signal = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             capabilities?.signalStrength?.takeIf { it != Int.MIN_VALUE && it < 0 }
         } else {
@@ -67,6 +77,12 @@ internal object AiNetworkAdvisor {
             downstreamKbps = capabilities?.linkDownstreamBandwidthKbps ?: 0,
             upstreamKbps = capabilities?.linkUpstreamBandwidthKbps ?: 0,
             signalDbm = signal,
+            wifi = wifi,
+            validated = capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true,
+            notCongested = Build.VERSION.SDK_INT < Build.VERSION_CODES.P ||
+                capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_CONGESTED) != false,
+            notSuspended = Build.VERSION.SDK_INT < Build.VERSION_CODES.P ||
+                capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED) != false,
         )
     }
 }
