@@ -82,6 +82,7 @@ object AppConfig {
     const val PREF_AETHER_KEYS_DIAL_MODE = "pref_aether_keys_dial_mode"
     const val PREF_AETHER_KEYS_COMMAND = "pref_aether_keys_command"
     const val PREF_REMOTE_DNS = "pref_remote_dns"
+    const val PREF_GAMING_MODE = "pref_vorzex_gaming_mode"
     const val PREF_DOMESTIC_DNS = "pref_domestic_dns"
     const val PREF_DNS_HOSTS = "pref_dns_hosts"
     const val PREF_DELAY_TEST_URL = "pref_delay_test_url"
