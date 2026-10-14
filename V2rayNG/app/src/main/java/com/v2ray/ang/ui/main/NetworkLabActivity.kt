@@ -95,6 +95,28 @@ private fun NetworkLabScreen(
                             }
                             Switch(checked = state.gamingEnabled, onCheckedChange = onGamingToggle)
                         }
+                        state.selectedDns?.let { selected ->
+                            val selectedName = state.resolvers.firstOrNull { it.coreAddress == selected }?.name ?: selected
+                            Text(
+                                stringResource(R.string.gaming_dns_selected, selectedName),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        state.error?.let { error ->
+                            val message = when (error) {
+                                "save_error" -> R.string.network_lab_save_error
+                                "no_dns" -> R.string.gaming_dns_unavailable
+                                else -> null
+                            }
+                            message?.let {
+                                Text(
+                                    stringResource(it),
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
+                        }
                         Button(onClick = onTestGaming, enabled = !state.isTestingGaming, modifier = Modifier.fillMaxWidth()) {
                             if (state.isTestingGaming) {
                                 CircularProgressIndicator()
