@@ -799,4 +799,5 @@
     <string name="gaming_jitter">برآورد نوسان پاسخ: %1$d میلی‌ثانیه</string>
     <string name="gaming_loss">درخواست‌های ناموفق: %1$d%%</string>
     <string name="gaming_measurement_note">این اعداد زمان پاسخ HTTPS هستند، نه پینگ ICMP یا پینگ سرور بازی. نتیجه به شبکه و مسیر VPN فعلی بستگی دارد.</string>
+    <string name="telegram_proxy_title">PT · پروکسی تلگرام</string>
 </resources>
