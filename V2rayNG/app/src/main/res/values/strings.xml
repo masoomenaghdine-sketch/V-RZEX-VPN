@@ -788,6 +788,7 @@
 
     <string name="psiphon_cdn_quick_setup">Psiphon CDN · Connect without config</string>
     <string name="psiphon_cdn_profile_name">Psiphon CDN · VØRZEX</string>
+    <string name="menu_item_import_config_manually_aether">Add Aether profile</string>
     <string name="dns_lab_title">DNS Lab</string>
     <string name="gaming_mode_title">Gaming Mode</string>
     <string name="network_lab_subtitle">Measure network quality and compare DNS providers</string>
