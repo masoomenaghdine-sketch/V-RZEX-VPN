@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.Base64
 import kotlin.math.abs
 import kotlin.math.max
 
@@ -203,9 +204,12 @@ class NetworkLabViewModel : ViewModel() {
                     name = host,
                     description = "Community DoH · tested on this network",
                     coreAddress = endpoint,
+                    // Public-DNS-Collector entries are RFC 8484 DoH endpoints, not necessarily
+                    // JSON APIs. Probe them with a real DNS wire query encoded as the required
+                    // base64url `dns=` parameter instead of assuming every resolver supports
+                    // Google's non-standard ?name=...&type=... JSON interface.
                     testUrl = uri.buildUpon()
-                        .appendQueryParameter("name", "example.com")
-                        .appendQueryParameter("type", "A")
+                        .appendQueryParameter("dns", encodedExampleDotComQuery())
                         .build()
                         .toString(),
                 )
@@ -217,15 +221,40 @@ class NetworkLabViewModel : ViewModel() {
         }
     }
 
+    /**
+     * A minimal RFC 1035 query for example.com A/IN, encoded as the RFC 8484
+     * base64url GET parameter used by public DoH endpoints.
+     */
+    private fun encodedExampleDotComQuery(): String {
+        val query = byteArrayOf(
+            0x12, 0x34, // transaction ID
+            0x01, 0x00, // recursion desired
+            0x00, 0x01, // one question
+            0x00, 0x00, // answer count
+            0x00, 0x00, // authority count
+            0x00, 0x00, // additional count
+            0x07, 0x65, 0x78, 0x61, 0x6d, 0x70, 0x6c, 0x65, // example
+            0x03, 0x63, 0x6f, 0x6d, // com
+            0x00, // root terminator
+            0x00, 0x01, // A
+            0x00, 0x01, // IN
+        )
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(query)
+    }
+
     private fun probeHttp(url: String, timeoutMs: Int): Long? {
         val start = SystemClock.elapsedRealtime()
         return try {
+            val isWireFormatDoh = url.contains("dns=", ignoreCase = true)
             val connection = (URL(url).openConnection() as HttpURLConnection).apply {
                 requestMethod = "GET"
                 connectTimeout = timeoutMs
                 readTimeout = timeoutMs
                 instanceFollowRedirects = true
-                setRequestProperty("Accept", "application/dns-json")
+                setRequestProperty(
+                    "Accept",
+                    if (isWireFormatDoh) "application/dns-message" else "application/dns-json"
+                )
                 setRequestProperty("Cache-Control", "no-cache")
                 useCaches = false
             }
