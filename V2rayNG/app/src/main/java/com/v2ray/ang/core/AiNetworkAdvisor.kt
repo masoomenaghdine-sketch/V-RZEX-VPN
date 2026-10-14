@@ -23,12 +23,14 @@ internal data class AiNetworkSnapshot(
     val validated: Boolean = true,
     val notCongested: Boolean = true,
     val notSuspended: Boolean = true,
+    /** True only after a real endpoint probe proves UDP/QUIC is reachable on this network. */
+    val udpReachable: Boolean = false,
 ) {
     /**
-     * HTTP/3 is only selected when Android reports a validated, uncongested Wi-Fi link with
-     * adequate estimated bandwidth and signal. Cellular, metered, unknown, congested, suspended,
-     * or weak links conservatively use HTTP/2/TCP. This is a heuristic; real latency is only known
-     * after testing a reachable endpoint.
+     * Strong Wi-Fi alone does not prove UDP/QUIC works: Android's bandwidth and signal estimates
+     * cannot detect carrier filtering or a blocked UDP path. Keep the robust TCP/HTTP/2 default
+     * unless a real endpoint probe explicitly confirms UDP reachability. This is especially important
+     * on metered/cellular networks and during severe connectivity restrictions.
      */
     val strongUnmeteredWifi: Boolean
         get() = wifi &&
@@ -46,7 +48,7 @@ internal data class AiNetworkSnapshot(
         get() = !strongUnmeteredWifi
 
     val preferredTransport: AetherTransport
-        get() = if (strongUnmeteredWifi) AetherTransport.HTTP3 else AetherTransport.HTTP2
+        get() = if (strongUnmeteredWifi && udpReachable) AetherTransport.HTTP3 else AetherTransport.HTTP2
 
     companion object {
         internal const val MIN_HTTP3_DOWNSTREAM_KBPS = 15_000
