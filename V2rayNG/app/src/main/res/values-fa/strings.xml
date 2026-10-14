@@ -792,6 +792,7 @@
     <string name="dns_result_unstable">ناپایدار یا در دسترس نیست · کمتر از ۳ پاسخ</string>
     <string name="dns_result_not_tested">هنوز آزمایش نشده</string>
     <string name="dns_apply_button">استفاده از این DNS در Xray</string>
+    <string name="dns_selected_confirmation">DNS انتخاب‌شده: %1$s. برای اعمال، به صفحهٔ اصلی برگرد تا سرویس راه‌اندازی مجدد شود.</string>
     <string name="gaming_mode_description">حالت گیمینگ را فعال کن و آزمون کیفیت شبکه با ۱۰ نمونه بگیر.</string>
     <string name="gaming_test_button">آزمون ۱۰ مرحله‌ای</string>
     <string name="gaming_average">میانگین پاسخ HTTPS: %1$d میلی‌ثانیه</string>
