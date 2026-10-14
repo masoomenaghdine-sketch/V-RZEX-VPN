@@ -153,6 +153,6 @@ class TelegramProxyActivity : BaseComponentActivity() {
     companion object {
         private const val PROXY_FEED_URL =
             "https://raw.githubusercontent.com/SoliSpirit/mtproto/master/all_proxies.txt"
-        private val PROXY_LINK = Regex("""(?:tg://proxy\\?[^"'<>\\s]+|https?://t\\.me/proxy\\?[^"'<>\\s]+)""", RegexOption.IGNORE_CASE)
+        private val PROXY_LINK = Regex("""(?:tg://proxy\?[^"'<>\s]+|https?://t\.me/proxy\?[^"'<>\s]+)""", RegexOption.IGNORE_CASE)
     }
 }
