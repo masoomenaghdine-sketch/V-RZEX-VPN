@@ -65,6 +65,7 @@
         <activity android:name=".ui.main.DeviceActivity" android:exported="false" />
         <activity android:name=".ui.main.NetworkLabActivity" android:exported="false" />
         <activity android:name=".ui.main.TelegramProxyActivity" android:exported="false" />
+        <activity android:name=".ui.main.TorCenterActivity" android:exported="false" />
 
         <activity
             android:name=".ui.main.MainActivity"
