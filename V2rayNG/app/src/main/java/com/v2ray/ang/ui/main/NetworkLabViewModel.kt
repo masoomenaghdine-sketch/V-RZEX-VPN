@@ -51,6 +51,8 @@ class NetworkLabViewModel : ViewModel() {
 
     fun scanDns() = scanDns(autoApplyBest = false)
 
+    fun scanAndApplyBestDns() = scanDns(autoApplyBest = true)
+
     private fun scanDns(autoApplyBest: Boolean) {
         if (_state.value.isScanningDns) return
         viewModelScope.launch {
