@@ -134,8 +134,8 @@ class ServerAetherActivity : BaseServerActivity() {
                 }
                 if (editGuid.isBlank() && intent.getBooleanExtra(EXTRA_AI_QUICK_SETUP, false)) {
                     remarks = "AI_CON"
-                    // Start with a real Aether MASQUE profile. The local network advisor selects
-                    // HTTP/2 on constrained links and HTTP/3 only on a strong unmetered link.
+                    // Start with a real Aether MASQUE profile. The local network advisor defaults to HTTP/2/TCP; it permits HTTP/3 only after
+                    // a real UDP reachability probe, not merely because Wi-Fi signal is strong.
                     aetherProtocol = AetherProtocol.MASQUE.type
                     aetherTransport = aiNetwork.preferredTransport.type
                     aetherTor = AetherTor.OFF.type
@@ -180,9 +180,10 @@ class ServerAetherActivity : BaseServerActivity() {
                 }
                 isPsiphonAvailable -> {
                     // Keep the no-credentials path for automatic save/connect, while letting the
-                    // Psiphon client choose its route on a strong unmetered network.
+                    // Psiphon chooses its route automatically; keep the tunnel TCP-first unless
+                    // the advisor has evidence that UDP/QUIC is reachable on this network.
                     uiState.aetherProtocol = AetherProtocol.MASQUE.type
-                    uiState.aetherTransport = AetherTransport.HTTP3.type
+                    uiState.aetherTransport = aiNetwork.preferredTransport.type
                     uiState.aetherTor = AetherTor.OFF.type
                     uiState.aetherPsiphon = AetherPsiphon.ONLY.type
                     uiState.aetherPsiphonMode = AetherPsiphonMode.AUTO.type
