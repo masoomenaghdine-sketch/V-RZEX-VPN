@@ -130,7 +130,7 @@ private fun NetworkLabScreen(
                 }
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.weight(1f)) {
                     items(state.resolvers, key = { it.coreAddress }) { resolver ->
-                        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+                        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                             Column(
                                 modifier = Modifier.fillMaxWidth().padding(14.dp),
                                 verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -154,8 +154,11 @@ private fun NetworkLabScreen(
                     item { Spacer(modifier = Modifier.height(6.dp)) }
                 }
             }
-            state.error?.let {
+            if (state.error != null) {
                 Text(stringResource(R.string.network_lab_save_error), color = MaterialTheme.colorScheme.error)
+            }
+            state.selectedDns?.let {
+                Text(stringResource(R.string.dns_selected_confirmation, it), color = MaterialTheme.colorScheme.primary)
             }
         }
     }
