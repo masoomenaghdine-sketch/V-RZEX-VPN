@@ -46,7 +46,7 @@ class AiNetworkAdvisorTest {
     }
 
     @Test
-    fun strongUnmeteredWifiPrefersHttp3() {
+    fun strongUnmeteredWifiUsesTcpUntilUdpIsVerified() {
         val snapshot = AiNetworkSnapshot(
             cellular = false,
             metered = false,
@@ -60,6 +60,23 @@ class AiNetworkAdvisorTest {
         )
         assertTrue(snapshot.strongUnmeteredWifi)
         assertFalse(snapshot.constrained)
+        assertEquals(AetherTransport.HTTP2, snapshot.preferredTransport)
+    }
+
+    @Test
+    fun strongWifiCanUseHttp3OnlyAfterUdpProbeSucceeds() {
+        val snapshot = AiNetworkSnapshot(
+            cellular = false,
+            metered = false,
+            downstreamKbps = 80_000,
+            upstreamKbps = 20_000,
+            signalDbm = -55,
+            wifi = true,
+            validated = true,
+            notCongested = true,
+            notSuspended = true,
+            udpReachable = true,
+        )
         assertEquals(AetherTransport.HTTP3, snapshot.preferredTransport)
     }
 
