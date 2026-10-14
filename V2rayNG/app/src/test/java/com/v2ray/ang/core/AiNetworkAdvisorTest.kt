@@ -53,10 +53,47 @@ class AiNetworkAdvisorTest {
             downstreamKbps = 80_000,
             upstreamKbps = 20_000,
             signalDbm = -55,
+            wifi = true,
+            validated = true,
+            notCongested = true,
+            notSuspended = true,
         )
         assertTrue(snapshot.strongUnmeteredWifi)
         assertFalse(snapshot.constrained)
         assertEquals(AetherTransport.HTTP3, snapshot.preferredTransport)
+    }
+
+    @Test
+    fun congestedWifiChoosesConservativeTcpEvenWithStrongSignal() {
+        val snapshot = AiNetworkSnapshot(
+            cellular = false,
+            metered = false,
+            downstreamKbps = 80_000,
+            upstreamKbps = 20_000,
+            signalDbm = -55,
+            wifi = true,
+            validated = true,
+            notCongested = false,
+            notSuspended = true,
+        )
+        assertTrue(snapshot.constrained)
+        assertEquals(AetherTransport.HTTP2, snapshot.preferredTransport)
+    }
+
+    @Test
+    fun unvalidatedWifiChoosesConservativeTcp() {
+        val snapshot = AiNetworkSnapshot(
+            cellular = false,
+            metered = false,
+            downstreamKbps = 80_000,
+            upstreamKbps = 20_000,
+            signalDbm = -55,
+            wifi = true,
+            validated = false,
+            notCongested = true,
+            notSuspended = true,
+        )
+        assertEquals(AetherTransport.HTTP2, snapshot.preferredTransport)
     }
 
     @Test
