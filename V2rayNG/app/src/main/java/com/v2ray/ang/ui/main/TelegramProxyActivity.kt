@@ -4,7 +4,6 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,22 +25,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.v2ray.ang.ui.base.BaseComponentActivity
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.net.URL
-import java.net.URLConnection
 
 class TelegramProxyActivity : BaseComponentActivity() {
     private var proxies by mutableStateOf<List<String>>(emptyList())
     private var loading by mutableStateOf(false)
     private var status by mutableStateOf("")
+    private var lastRefresh by mutableStateOf(0L)
 
     override fun onStart() {
         super.onStart()
-        if (proxies.isEmpty() && !loading) refreshProxies()
+        TelegramProxyRefreshWorker.schedule(this)
+        proxies = TelegramProxyRefreshWorker.cachedProxies(this)
+        lastRefresh = TelegramProxyRefreshWorker.lastRefreshMillis(this)
+        if (proxies.isEmpty() || System.currentTimeMillis() - lastRefresh >= REFRESH_INTERVAL_MS) {
+            refreshProxies()
+        } else {
+            status = "آخرین به‌روزرسانی: ${formatAge(lastRefresh)}؛ بررسی پس‌زمینه هر ۲ ساعت زمان‌بندی شده است."
+        }
     }
 
     @Composable
@@ -53,28 +54,16 @@ class TelegramProxyActivity : BaseComponentActivity() {
             ) {
                 Text("PT · Telegram Proxy", style = MaterialTheme.typography.headlineSmall)
                 Text(
-                    "پروکسی‌های عمومی MTProto برای خود تلگرام هستند؛ به‌تنهایی VPN کل دستگاه را فعال نمی‌کنند.",
+                    "پروکسی‌های MTProto فقط برای تلگرام هستند و اتصال VPN کل دستگاه را فعال نمی‌کنند.",
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Button(onClick = { refreshProxies() }, enabled = !loading, modifier = Modifier.fillMaxWidth()) {
                     if (loading) CircularProgressIndicator()
-                    else Text("جست‌وجوی فهرست و کانال‌ها")
+                    else Text("به‌روزرسانی پروکسی‌ها")
                 }
                 if (status.isNotBlank()) Text(status, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    Button(onClick = { openUrl("https://t.me/PeopleProxy") }, modifier = Modifier.weight(1f)) {
-                        Text("PeopleProxy")
-                    }
-                    Button(onClick = { openUrl("https://t.me/iRoProxy") }, modifier = Modifier.weight(1f)) {
-                        Text("iRoProxy")
-                    }
-                }
-                Button(
-                    onClick = { openUrl("https://github.com/SoliSpirit/mtproto") },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("منبع فهرست MTProto") }
                 Text(
-                    "فهرست عمومی و پیش‌نمایش پست‌های قابل‌دسترسی این دو کانال بررسی می‌شوند. پروکسی عمومی ممکن است آفلاین یا غیرقابل‌اعتماد باشد.",
+                    "فهرست عمومی به‌طور دوره‌ای دریافت می‌شود. به‌روزرسانی هر ۲ ساعت توسط Android زمان‌بندی می‌شود و ممکن است به‌دلیل محدودیت‌های باتری/شبکه کمی دیرتر اجرا شود. فعال‌بودن و قابل‌اعتمادبودن هر پروکسی تضمین‌شده نیست.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -99,47 +88,37 @@ class TelegramProxyActivity : BaseComponentActivity() {
     private fun refreshProxies() {
         if (loading) return
         loading = true
-        status = "در حال جست‌وجوی منابع عمومی…"
+        status = "در حال دریافت فهرست پروکسی‌های عمومی…"
         lifecycleScope.launch {
-            val result = withContext(Dispatchers.IO) {
-                runCatching {
-                    val sources = listOf(
-                        PROXY_FEED_URL,
-                        "https://t.me/s/PeopleProxy",
-                        "https://t.me/s/iRoProxy"
-                    )
-                    sources.map { source ->
-                        async(Dispatchers.IO) { readSource(source) }
-                    }.awaitAll().flatten().distinct().take(150)
-                }
-            }
+            val result = runCatching { TelegramProxyRefreshWorker.refreshNow(this@TelegramProxyActivity) }
             loading = false
             result.onSuccess { found ->
-                proxies = found
-                status = if (found.isEmpty()) {
-                    "پروکسی قابل‌استخراج پیدا نشد؛ ممکن است منبع خالی یا دسترسی به پیش‌نمایش کانال‌ها محدود باشد."
+                proxies = found.ifEmpty { TelegramProxyRefreshWorker.cachedProxies(this@TelegramProxyActivity) }
+                lastRefresh = TelegramProxyRefreshWorker.lastRefreshMillis(this@TelegramProxyActivity)
+                status = if (proxies.isEmpty()) {
+                    "پروکسی‌ای دریافت نشد؛ اتصال اینترنت یا منبع فهرست را بررسی کن."
                 } else {
-                    "تعداد ${found.size} لینک یکتا پیدا شد؛ فعال‌بودن آن‌ها هنوز تأیید نشده است."
+                    "${proxies.size} لینک پیدا شد؛ آخرین دریافت: ${formatAge(lastRefresh)}. فعال‌بودن لینک‌ها جداگانه تضمین نشده است."
                 }
             }.onFailure {
-                status = "جست‌وجو ناموفق بود. اینترنت را بررسی کن یا کانال‌ها را جداگانه باز کن."
+                proxies = TelegramProxyRefreshWorker.cachedProxies(this@TelegramProxyActivity)
+                status = if (proxies.isEmpty()) {
+                    "دریافت ناموفق بود؛ بعداً دوباره تلاش کن."
+                } else {
+                    "به‌روزرسانی ناموفق بود؛ فهرست ذخیره‌شده نمایش داده می‌شود."
+                }
             }
         }
     }
 
-    private fun readSource(source: String): List<String> {
-        val connection: URLConnection = URL(source).openConnection()
-        connection.connectTimeout = 7000
-        connection.readTimeout = 7000
-        connection.setRequestProperty("User-Agent", "Mozilla/5.0 VORZEX-PT")
-        val body = connection.getInputStream().bufferedReader(Charsets.UTF_8).use { it.readText() }
-            .replace("&amp;", "&")
-            .replace("&#38;", "&")
-        return PROXY_LINK.findAll(body)
-            .map { it.value.trimEnd('.', ',', ')', ']', ';') }
-            .filter { it.contains("server=") && it.contains("port=") && it.contains("secret=") }
-            .distinct()
-            .toList()
+    private fun formatAge(timestamp: Long): String {
+        if (timestamp <= 0L) return "نامشخص"
+        val minutes = ((System.currentTimeMillis() - timestamp).coerceAtLeast(0L) / 60_000L)
+        return when {
+            minutes < 1 -> "همین الان"
+            minutes < 60 -> "${minutes} دقیقه قبل"
+            else -> "${minutes / 60} ساعت قبل"
+        }
     }
 
     private fun openUrl(value: String) {
@@ -151,8 +130,6 @@ class TelegramProxyActivity : BaseComponentActivity() {
     }
 
     companion object {
-        private const val PROXY_FEED_URL =
-            "https://raw.githubusercontent.com/SoliSpirit/mtproto/master/all_proxies.txt"
-        private val PROXY_LINK = Regex("""(?:tg://proxy\?[^"'<>\s]+|https?://t\.me/proxy\?[^"'<>\s]+)""", RegexOption.IGNORE_CASE)
+        private const val REFRESH_INTERVAL_MS = 2 * 60 * 60 * 1000L
     }
 }
