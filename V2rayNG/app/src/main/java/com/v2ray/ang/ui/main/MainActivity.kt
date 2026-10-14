@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.KeyEvent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -52,11 +53,19 @@ import com.v2ray.ang.ui.userasset.UserAssetActivity
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.Utils
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.atomic.AtomicBoolean
 
 class MainActivity : HelperBaseComponentActivity() {
     private var pendingAetherQuickConnect = false
+    private val aiAutoConnectInProgress = AtomicBoolean(false)
+    @Volatile private var suppressAiFailoverOnce = false
+    @Volatile private var lastAiFailoverAtMs = 0L
     private val mainViewModel: MainViewModel by viewModels {
         MainViewModel.Factory(application, MainRepository(application as AngApplication))
     }
@@ -120,6 +129,35 @@ class MainActivity : HelperBaseComponentActivity() {
         VorzexInstallationStore(this)
         mainViewModel.onAction(MainAction.Initialize)
 
+        // If an AI_CON tunnel unexpectedly stops, attempt a bounded, verified fallback.
+        // Manual disconnects are explicitly suppressed; repeated failures are rate-limited.
+        lifecycleScope.launch {
+            var hadRunningSession = false
+            mainViewModel.uiState.collect { state ->
+                if (state.isRunning) {
+                    hadRunningSession = true
+                    return@collect
+                }
+                if (!hadRunningSession) return@collect
+                hadRunningSession = false
+                if (suppressAiFailoverOnce) {
+                    suppressAiFailoverOnce = false
+                    return@collect
+                }
+                val selectedProfile = state.selectedGuid?.let { MmkvManager.decodeServerConfig(it) }
+                if (selectedProfile?.remarks.equals("AI_CON", ignoreCase = true) &&
+                    !aiAutoConnectInProgress.get()
+                ) {
+                    val now = SystemClock.elapsedRealtime()
+                    if (now - lastAiFailoverAtMs >= AI_FAILOVER_COOLDOWN_MS) {
+                        lastAiFailoverAtMs = now
+                        LogUtil.w(AppConfig.TAG, "AI_CON session stopped unexpectedly; trying bounded failover")
+                        startAiConfigQuickSetup()
+                    }
+                }
+            }
+        }
+
         checkAndRequestPermission(PermissionType.POST_NOTIFICATIONS) {}
     }
 
@@ -172,54 +210,105 @@ class MainActivity : HelperBaseComponentActivity() {
     }
 
     private fun startAiConfigQuickSetup() {
-        // AI_CON uses only locally stored Xray profiles; it never imports a feed or fabricates server credentials.
-        // Probe TCP reachability and handshake latency off the main thread before selecting a candidate.
+        if (!aiAutoConnectInProgress.compareAndSet(false, true)) return
         lifecycleScope.launch {
-            val snapshot = com.v2ray.ang.core.AiNetworkAdvisor.assess(this@MainActivity)
-            val candidate = com.v2ray.ang.core.AiConfigGenerator.bestReachableLocalXrayProfile(snapshot)
-            if (candidate != null) {
-                runCatching {
-                    val source = candidate.profile
-                    val localAiGuid = MmkvManager.decodeAllServerList().firstOrNull { guid ->
+            try {
+                // A TCP handshake only narrows the list; success requires real HTTPS traffic through the tunnel.
+                val snapshot = com.v2ray.ang.core.AiNetworkAdvisor.assess(this@MainActivity)
+                val candidates = com.v2ray.ang.core.AiConfigGenerator
+                    .rankedReachableLocalXrayProfiles(snapshot)
+                    .take(MAX_AI_AUTO_CONNECT_ATTEMPTS)
+
+                if (candidates.isNotEmpty()) {
+                    var localAiGuid = MmkvManager.decodeAllServerList().firstOrNull { guid ->
                         val profile = MmkvManager.decodeServerConfig(guid)
                         profile?.remarks.equals("AI_CON", ignoreCase = true) &&
                             profile?.subscriptionId == AppConfig.DEFAULT_SUBSCRIPTION_ID
                     }
-                    val generated = if (source.remarks.equals("AI_CON", ignoreCase = true) &&
-                        source.subscriptionId == AppConfig.DEFAULT_SUBSCRIPTION_ID
-                    ) {
-                        candidate.guid
-                    } else {
-                        val aiProfile = source.copy(
-                            remarks = "AI_CON",
-                            subscriptionId = AppConfig.DEFAULT_SUBSCRIPTION_ID,
-                            addedTime = System.currentTimeMillis(),
-                        )
-                        if (localAiGuid != null) {
-                            MmkvManager.encodeServerConfig(localAiGuid, aiProfile)
-                        } else {
-                            MmkvManager.encodeServerConfig("", aiProfile)
-                        }
-                    }
-                    mainViewModel.updateSelectedGuid(generated)
-                    mainViewModel.onAction(MainAction.RefreshGroups)
-                    LauncherManager.restartServiceOrStart(this@MainActivity, ::requestServiceStart)
-                    toastSuccess(R.string.ai_config_xray_selected)
-                    return@launch
-                }.onFailure { error ->
-                    LogUtil.e(AppConfig.TAG, "AI_CON could not store the locally generated Xray profile", error)
-                    toastError(R.string.toast_failure)
-                }
-            }
 
-            // If no locally stored Xray endpoint passes the live TCP probe, use the bundled Aether
-            // bootstrap path. This path is independent of imported Xray profiles and may use Psiphon/Tor.
-            pendingAetherQuickConnect = true
-            profileEditorLauncher.launch(
-                Intent(this@MainActivity, ServerAetherActivity::class.java)
-                    .putExtra(ServerAetherActivity.EXTRA_AI_QUICK_SETUP, true)
-            )
+                    for ((index, candidate) in candidates.withIndex()) {
+                        val generatedResult = runCatching {
+                            val aiProfile = candidate.profile.copy(
+                                remarks = "AI_CON",
+                                subscriptionId = AppConfig.DEFAULT_SUBSCRIPTION_ID,
+                                addedTime = System.currentTimeMillis(),
+                            )
+                            val existingGuid = localAiGuid
+                            if (existingGuid != null) {
+                                MmkvManager.encodeServerConfig(existingGuid, aiProfile)
+                                existingGuid
+                            } else {
+                                MmkvManager.encodeServerConfig("", aiProfile).also { localAiGuid = it }
+                            }
+                        }
+                        if (generatedResult.isFailure) {
+                            LogUtil.e(AppConfig.TAG, "AI_CON could not save candidate ${candidate.guid}", generatedResult.exceptionOrNull())
+                            continue
+                        }
+                        val generatedGuid = generatedResult.getOrThrow()
+                        mainViewModel.updateSelectedGuid(generatedGuid)
+                        mainViewModel.onAction(MainAction.RefreshGroups)
+
+                        if (mainViewModel.uiState.value.isRunning) {
+                            LauncherManager.stopService(this@MainActivity)
+                            withTimeoutOrNull(SERVICE_STOP_WAIT_MS) {
+                                mainViewModel.uiState.first { !it.isRunning }
+                            }
+                        }
+                        suppressAiFailoverOnce = false
+                        requestServiceStart()
+
+                        var sawRunning = false
+                        val connectionState = withTimeoutOrNull(AI_CONNECTION_WAIT_MS) {
+                            mainViewModel.uiState.first { state ->
+                                if (state.isRunning) sawRunning = true
+                                (state.isRunning && state.status is MainStatus.Connected) ||
+                                    (sawRunning && !state.isRunning)
+                            }
+                        }
+                        val connected = connectionState?.isRunning == true &&
+                            connectionState.status is MainStatus.Connected
+                        val verified = connected &&
+                            com.v2ray.ang.core.AiConnectionVerifier.verifyTunnelTraffic()
+
+                        if (verified) {
+                            toastSuccess(R.string.ai_config_xray_selected)
+                            return@launch
+                        }
+
+                        LogUtil.w(
+                            AppConfig.TAG,
+                            "AI_CON candidate ${candidate.guid} did not pass end-to-end tunnel verification"
+                        )
+                        if (mainViewModel.uiState.value.isRunning) {
+                            LauncherManager.stopService(this@MainActivity)
+                            withTimeoutOrNull(SERVICE_STOP_WAIT_MS) {
+                                mainViewModel.uiState.first { !it.isRunning }
+                            }
+                        }
+                        if (index < candidates.lastIndex) delay(AI_FAILOVER_RETRY_DELAY_MS)
+                    }
+                }
+
+                // Preserve the independent Aether quick-setup fallback when no local Xray profile
+                // passes the real traffic check.
+                pendingAetherQuickConnect = true
+                profileEditorLauncher.launch(
+                    Intent(this@MainActivity, ServerAetherActivity::class.java)
+                        .putExtra(ServerAetherActivity.EXTRA_AI_QUICK_SETUP, true)
+                )
+            } finally {
+                aiAutoConnectInProgress.set(false)
+            }
         }
+    }
+
+    private companion object {
+        const val MAX_AI_AUTO_CONNECT_ATTEMPTS = 3
+        const val AI_CONNECTION_WAIT_MS = 18_000L
+        const val SERVICE_STOP_WAIT_MS = 4_000L
+        const val AI_FAILOVER_RETRY_DELAY_MS = 500L
+        const val AI_FAILOVER_COOLDOWN_MS = 30_000L
     }
 
     private fun shareToClipboard(guid: String): Boolean =
@@ -286,11 +375,13 @@ class MainActivity : HelperBaseComponentActivity() {
 
     private fun handleFabAction() {
         if (mainViewModel.uiState.value.isRunning) {
+            suppressAiFailoverOnce = true
             LauncherManager.stopService(this)
             // A service whose process died takes no stop and answers nothing; asking for its state right
             // after lets that silence show the screen as stopped instead of leaving it connected.
             mainViewModel.onAction(MainAction.RefreshServiceState)
         } else {
+            suppressAiFailoverOnce = false
             requestServiceStart()
         }
     }
