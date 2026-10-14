@@ -788,4 +788,21 @@
 
     <string name="psiphon_cdn_quick_setup">Psiphon CDN · Connect without config</string>
     <string name="psiphon_cdn_profile_name">Psiphon CDN · VØRZEX</string>
+    <string name="dns_lab_title">DNS Lab</string>
+    <string name="gaming_mode_title">Gaming Mode</string>
+    <string name="network_lab_subtitle">Measure network quality and compare DNS providers</string>
+    <string name="network_lab_back">Back</string>
+    <string name="network_lab_save_error">Could not save the setting. Please try again.</string>
+    <string name="dns_lab_explanation">Test DNS-over-HTTPS endpoints using the current network route. The fastest result is only a guide; the best resolver can vary by network and app.</string>
+    <string name="dns_scan_button">Scan DNS providers</string>
+    <string name="dns_result_success">%1$d ms median · 3/3 responses</string>
+    <string name="dns_result_unstable">Unstable or unreachable · fewer than 3 responses</string>
+    <string name="dns_result_not_tested">Not tested yet</string>
+    <string name="dns_apply_button">Use this DNS for Xray</string>
+    <string name="gaming_mode_description">Enable Gaming Mode and run a 10-sample network-quality check.</string>
+    <string name="gaming_test_button">Run 10-sample test</string>
+    <string name="gaming_average">Average HTTPS response: %1$d ms</string>
+    <string name="gaming_jitter">Response variation estimate: %1$d ms</string>
+    <string name="gaming_loss">Failed requests: %1$d%%</string>
+    <string name="gaming_measurement_note">These are HTTPS probe timings, not ICMP ping or your game server's ping. Results depend on your current network and VPN route.</string>
 </resources>
