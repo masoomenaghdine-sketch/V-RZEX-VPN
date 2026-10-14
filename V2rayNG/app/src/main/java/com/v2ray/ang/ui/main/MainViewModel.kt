@@ -360,6 +360,8 @@ class MainViewModel(
             }
 
             MainAction.GenerateAiConfig,
+            MainAction.OpenDnsLab,
+            MainAction.OpenGamingMode,
             MainAction.ToggleService,
             MainAction.TestCurrentServer,
             MainAction.ImportQRcode,
