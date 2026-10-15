@@ -97,11 +97,6 @@ private fun CnrScreen(onImport: (String) -> Unit, onBackToConnect: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text("CNR · VØRZEX VPN", modifier = Modifier.graphicsLayer(alpha = pulse), style = MaterialTheme.typography.headlineSmall, color = Color(0xFF70F0FF))
-            Text(
-                "مرکز کانفیگ‌های عمومی",
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White
-            )
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
