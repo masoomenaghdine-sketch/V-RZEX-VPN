@@ -167,7 +167,6 @@ internal object TelegramProxyFeed {
         connection.useCaches = false
         connection.setRequestProperty("User-Agent", "Mozilla/5.0 VORZEX")
         connection.setRequestProperty("Accept", "text/plain,text/html,*/*")
-        connection.setRequestProperty("Accept-Encoding", "gzip")
         return try {
             val code = connection.responseCode
             if (code !in 200..299) return emptyList()
