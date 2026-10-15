@@ -124,7 +124,7 @@ internal object TelegramProxyFeed {
                 val separator = part.indexOf('=')
                 if (separator <= 0) null else {
                     URLDecoder.decode(part.substring(0, separator), StandardCharsets.UTF_8.name()) to
-                        URLDecoder.decode(part.substring(separator + 1), StandardCharsets.UTF_8.name())
+                        URLDecoder.decode(part.substring(separator + 1).replace("+", "%2B"), StandardCharsets.UTF_8.name())
                 }
             }.toMap()
             val server = params["server"].orEmpty()
