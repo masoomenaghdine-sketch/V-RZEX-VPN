@@ -579,7 +579,7 @@ class MainActivity : HelperBaseComponentActivity() {
                             is com.v2ray.ang.util.VorzexConfigExchange.DecodeResult.Success -> {
                                 // Import all payloads in one operation so asynchronous imports cannot race.
                                 // The existing parser remains responsible for validating each Xray entry.
-                                mainViewModel.onAction(MainAction.ImportVZVProfiles(decoded.profiles.map { it.content })
+                                mainViewModel.onAction(MainAction.ImportVZVProfiles(decoded.profiles.map { it.content }))
                                 toastSuccess(R.string.toast_success)
                             }
                             is com.v2ray.ang.util.VorzexConfigExchange.DecodeResult.Failure -> {
