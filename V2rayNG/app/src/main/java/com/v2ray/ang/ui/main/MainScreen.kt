@@ -214,6 +214,8 @@ fun MainScreen(
                             MainMoreMenuAction.DeleteDuplicate -> showDelDuplicateConfirm = true
                             MainMoreMenuAction.DeleteInvalid -> showDelInvalidConfirm = true
                             MainMoreMenuAction.ExportAll -> onAction(MainAction.ExportAll)
+                            MainMoreMenuAction.ExportVZV -> onAction(MainAction.ExportVZV)
+                            MainMoreMenuAction.ShareVZV -> onAction(MainAction.ShareVZV)
                             MainMoreMenuAction.LocateSelected -> onAction(MainAction.LocateSelectedServer)
                             MainMoreMenuAction.SortByTestResults -> onAction(MainAction.SortByTestResults)
                             MainMoreMenuAction.TestAll -> onAction(MainAction.TestAllServers)
