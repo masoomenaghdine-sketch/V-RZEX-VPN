@@ -40,7 +40,8 @@ class VorzexConfigExchangeTest {
 
     @Test
     fun identifiesExtensionsWithoutPretendingToDecodeNpv() {
-        assertTrue(VorzexConfigExchange.isRecognizedExchangeExtension("share.VZV"))
+        assertTrue(VorzexConfigExchange.isRecognizedExchangeExtension("share.VXV"))
+        assertTrue(VorzexConfigExchange.isRecognizedExchangeExtension("legacy.VZV"))
         assertTrue(VorzexConfigExchange.isNpvExtension("legacy.NPV"))
         assertTrue(VorzexConfigExchange.isNpvExtension("legacy.npvs"))
     }
