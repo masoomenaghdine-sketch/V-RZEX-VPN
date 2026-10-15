@@ -817,4 +817,8 @@
     <string name="gaming_dns_selected">DNS selected for Gaming Mode: %1$s</string>
     <string name="gaming_dns_unavailable">No tested DNS provider responded successfully. Your previous DNS setting was kept.</string>
     <string name="telegram_proxy_title">PT · Telegram Proxy</string>
+    <string name="network_endpoint_test_button">Test Google, Cloudflare, YouTube and Instagram</string>
+    <string name="network_endpoint_note">HTTPS response timing on this network, not ICMP or in-game ping. Some services may be blocked or unavailable in your region.</string>
+    <string name="network_endpoint_result">%1$s · median %2$d ms · %3$d/%4$d successful</string>
+    <string name="network_endpoint_failed">%1$s · unavailable</string>
 </resources>
