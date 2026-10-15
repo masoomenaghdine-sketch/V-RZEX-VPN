@@ -59,7 +59,7 @@ private fun DeviceScreen(
             modifier = Modifier.fillMaxSize().padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text("VØRZEX · Device", style = MaterialTheme.typography.headlineSmall, color = Color(0xFF70F0FF))
+            Text("دستگاه", style = MaterialTheme.typography.headlineSmall, color = Color(0xFF70F0FF))
             DeviceInfoCard("دستگاه", deviceName)
             DeviceInfoCard("اندروید", androidVersion)
             DeviceInfoCard("نسخهٔ برنامه", appVersion)
