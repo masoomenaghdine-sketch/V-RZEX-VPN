@@ -346,6 +346,7 @@ class MainViewModel(
             is MainAction.MoveServer -> moveServer(action.groupId, action.fromGuid, action.toGuid)
             is MainAction.Search -> filterConfig(action.query)
             is MainAction.ImportBatchConfig -> importBatchConfig(action.configText)
+            is MainAction.ImportVZVProfiles -> importVZVProfiles(action.configs)
             MainAction.LocateHandled -> consumeLocateTarget()
             is MainAction.MoveRefusalShown -> _uiState.update {
                 if (it.moveRefusal == action.refusal) it.copy(moveRefusal = null) else it
@@ -612,6 +613,42 @@ class MainViewModel(
     }
 
     // ---------- Business actions (coroutine-based) ----------
+    private fun importVZVProfiles(configs: List<String>) {
+        if (configs.isEmpty()) {
+            toastError(R.string.toast_failure)
+            return
+        }
+        launchLoading {
+            withContext(ioDispatcher) {
+                try {
+                    var imported = 0
+                    var subscriptions = 0
+                    configs.forEach { config ->
+                        currentCoroutineContext().ensureActive()
+                        val (count, countSub) = dataSource.importBatchConfig(
+                            config, uiState.value.selectedGroupId, true
+                        )
+                        imported += count
+                        subscriptions += countSub
+                    }
+                    when {
+                        imported > 0 -> {
+                            toast(dataSource.getString(R.string.title_import_config_count, imported))
+                            setupGroupTab(forceRefresh = true)
+                        }
+                        subscriptions > 0 -> setupGroupTab(forceRefresh = true)
+                        else -> toastError(R.string.toast_failure)
+                    }
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (e: Exception) {
+                    LogUtil.e(AppConfig.TAG, "Failed to import VZV profiles", e)
+                    toastError(R.string.toast_failure)
+                }
+            }
+        }
+    }
+
     private fun importBatchConfig(configText: String) {
         launchLoading {
             withContext(ioDispatcher) {
