@@ -804,10 +804,10 @@
     <string name="dns_selected_confirmation">Selected DNS: %1$s. Return to the main screen to restart the service.</string>
     <string name="gaming_mode_description">Gaming DNS Smart Scan tests encrypted DoH resolvers on your current network, then configures the fastest reliable Primary and a different tested Backup. If no resolver passes all checks, your previous DNS is kept.</string>
     <string name="gaming_test_button">Run 10-sample test</string>
-    <string name="gaming_average">Average HTTPS response: %1$d ms</string>
-    <string name="gaming_jitter">Response variation estimate: %1$d ms</string>
-    <string name="gaming_loss">Failed requests: %1$d%%</string>
-    <string name="gaming_measurement_note">DNS optimization and HTTPS tests are network-specific. These timings are not ICMP ping or actual in-game latency, and results can vary by game and route.</string>
+    <string name="gaming_average">Connection test · average HTTPS response: %1$d ms</string>
+    <string name="gaming_jitter">Connection test · response variation: %1$d ms</string>
+    <string name="gaming_loss">Connection test · failed HTTPS requests: %1$d%%</string>
+    <string name="gaming_measurement_note">Separate measurements: DNS Lab measures DoH resolver response; this test alternates two HTTPS endpoints to estimate general connection response and reliability. Neither is ICMP ping or actual in-game latency. Real game ping requires testing the game server or a compatible endpoint.</string>
     <string name="gaming_dns_selected">DNS selected for Gaming Mode: %1$s</string>
     <string name="gaming_dns_primary">Primary DoH: %1$s</string>
     <string name="gaming_dns_secondary">Backup DoH: %1$s</string>
