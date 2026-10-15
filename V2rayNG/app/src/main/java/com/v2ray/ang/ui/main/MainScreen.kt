@@ -214,6 +214,8 @@ fun MainScreen(
                             MainMoreMenuAction.DeleteDuplicate -> showDelDuplicateConfirm = true
                             MainMoreMenuAction.DeleteInvalid -> showDelInvalidConfirm = true
                             MainMoreMenuAction.ExportAll -> onAction(MainAction.ExportAll)
+                            MainMoreMenuAction.ExportVZV -> onAction(MainAction.ExportVZV)
+                            MainMoreMenuAction.ShareVZV -> onAction(MainAction.ShareVZV)
                             MainMoreMenuAction.LocateSelected -> onAction(MainAction.LocateSelectedServer)
                             MainMoreMenuAction.SortByTestResults -> onAction(MainAction.SortByTestResults)
                             MainMoreMenuAction.TestAll -> onAction(MainAction.TestAllServers)
@@ -402,12 +404,6 @@ private fun QuickAccessPanel(
             .padding(top = 6.dp, bottom = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(
-            text = "دسترسی سریع",
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(horizontal = 16.dp)
-        )
         LazyRow(
             contentPadding = PaddingValues(horizontal = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(9.dp)
@@ -416,7 +412,6 @@ private fun QuickAccessPanel(
                 QuickNavItem(
                     emoji = "🌐",
                     title = "کانفیگ‌های CNR",
-                    subtitle = "سرورهای عمومی",
                     onClick = onCnr
                 )
             }
@@ -424,7 +419,6 @@ private fun QuickAccessPanel(
                 QuickNavItem(
                     emoji = "🧅",
                     title = "شبکه Tor",
-                    subtitle = "اتصال خصوصی",
                     onClick = onTor
                 )
             }
@@ -432,7 +426,6 @@ private fun QuickAccessPanel(
                 QuickNavItem(
                     emoji = "📱",
                     title = "دستگاه",
-                    subtitle = "وضعیت و حریم خصوصی",
                     onClick = onDevice
                 )
             }
@@ -440,7 +433,6 @@ private fun QuickAccessPanel(
                 QuickNavItem(
                     emoji = "⚙️",
                     title = "تنظیمات",
-                    subtitle = "شخصی‌سازی برنامه",
                     onClick = onSettings
                 )
             }
@@ -452,7 +444,6 @@ private fun QuickAccessPanel(
 private fun QuickNavItem(
     emoji: String,
     title: String,
-    subtitle: String,
     onClick: () -> Unit
 ) {
     val shape = RoundedCornerShape(18.dp)
@@ -479,11 +470,6 @@ private fun QuickNavItem(
                 text = title,
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

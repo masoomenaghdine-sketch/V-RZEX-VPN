@@ -57,6 +57,8 @@ sealed interface MainAction {
     data object SortByTestResults : MainAction
     data object UpdateSubscriptions : MainAction
     data object ExportAll : MainAction
+    data object ExportVZV : MainAction
+    data object ShareVZV : MainAction
 
     data object ImportQRcode : MainAction
     data object ImportClipboard : MainAction
@@ -84,6 +86,7 @@ sealed interface MainAction {
     data object DismissQRCodeDialog : MainAction
 
     data class ImportBatchConfig(val configText: String) : MainAction
+    data class ImportVZVProfiles(val configs: List<String>) : MainAction
 
     data object LocateHandled : MainAction
 

@@ -5,11 +5,9 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
@@ -78,11 +76,6 @@ private fun NetworkLabScreen(
                         text = stringResource(if (gamingTab) R.string.gaming_mode_title else R.string.dns_lab_title),
                         style = MaterialTheme.typography.headlineSmall,
                     )
-                    Text(
-                        text = stringResource(R.string.network_lab_subtitle),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
                 Button(onClick = onBack) { Text(stringResource(R.string.network_lab_back)) }
             }
@@ -90,11 +83,11 @@ private fun NetworkLabScreen(
             if (gamingTab) {
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                     Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(stringResource(R.string.gaming_mode_title), style = MaterialTheme.typography.titleMedium)
-                                Text(stringResource(R.string.gaming_mode_description), style = MaterialTheme.typography.bodySmall)
-                            }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Switch(checked = state.gamingEnabled, onCheckedChange = onGamingToggle)
                         }
                         state.selectedDns?.let { selected ->
@@ -135,15 +128,9 @@ private fun NetworkLabScreen(
                         state.gamingLossPercent?.let {
                             Text(stringResource(R.string.gaming_loss, it))
                         }
-                        Text(
-                            stringResource(R.string.gaming_measurement_note),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
                     }
                 }
             } else {
-                Text(stringResource(R.string.dns_lab_explanation), style = MaterialTheme.typography.bodyMedium)
                 Button(
                     onClick = onScanDns,
                     enabled = !state.isScanningDns,
@@ -167,7 +154,6 @@ private fun NetworkLabScreen(
                                 verticalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
                                 Text(resolver.name, style = MaterialTheme.typography.titleMedium)
-                                Text(resolver.description, style = MaterialTheme.typography.bodySmall)
                                 Text(
                                     text = when (resolver.successful) {
                                         true -> stringResource(R.string.dns_result_success, resolver.latencyMs ?: 0L)
@@ -182,19 +168,20 @@ private fun NetworkLabScreen(
                             }
                         }
                     }
-                    item { Spacer(modifier = Modifier.height(6.dp)) }
                 }
             }
-            state.error?.let { error ->
-                val message = when (error) {
-                    "no_dns" -> R.string.gaming_dns_unavailable
-                    "save_error" -> R.string.network_lab_save_error
-                    else -> null
+            if (!gamingTab) {
+                state.error?.let { error ->
+                    val message = when (error) {
+                        "no_dns" -> R.string.gaming_dns_unavailable
+                        "save_error" -> R.string.network_lab_save_error
+                        else -> null
+                    }
+                    message?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error) }
                 }
-                message?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error) }
-            }
-            state.selectedDns?.let {
-                Text(stringResource(R.string.dns_selected_confirmation, it), color = MaterialTheme.colorScheme.primary)
+                state.selectedDns?.let {
+                    Text(stringResource(R.string.dns_selected_confirmation, it), color = MaterialTheme.colorScheme.primary)
+                }
             }
         }
     }

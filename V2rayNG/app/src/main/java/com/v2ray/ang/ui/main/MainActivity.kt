@@ -1,12 +1,16 @@
 package com.v2ray.ang.ui.main
 
 import android.content.Intent
+import android.content.ClipData
+import android.net.Uri
 import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.KeyEvent
 import android.widget.Toast
+import androidx.core.content.FileProvider
+import java.io.File
 import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -63,6 +67,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 class MainActivity : HelperBaseComponentActivity() {
     private var pendingAetherQuickConnect = false
+    private var pendingVZVExport: String? = null
     private val aiAutoConnectInProgress = AtomicBoolean(false)
     @Volatile private var suppressAiFailoverOnce = false
     @Volatile private var lastAiFailoverAtMs = 0L
@@ -73,6 +78,25 @@ class MainActivity : HelperBaseComponentActivity() {
     private val requestVpnPermission =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             if (it.resultCode == RESULT_OK) startV2Ray()
+        }
+
+    private val vzvDocumentLauncher =
+        registerForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.vorzex.config+json")) { uri ->
+            if (uri == null) {
+                pendingVZVExport = null
+                return@registerForActivityResult
+            }
+            val payload = pendingVZVExport
+            pendingVZVExport = null
+            try {
+                if (payload.isNullOrBlank()) throw IllegalStateException("No VZV export data")
+                contentResolver.openOutputStream(uri)?.bufferedWriter(Charsets.UTF_8)?.use { it.write(payload) }
+                    ?: throw IllegalStateException("Cannot write the selected file")
+                toastSuccess(R.string.vzv_export_saved)
+            } catch (e: Exception) {
+                LogUtil.e(AppConfig.TAG, "Failed to write VZV export", e)
+                toastError(R.string.toast_failure)
+            }
         }
 
     private val profileEditorLauncher =
@@ -128,6 +152,7 @@ class MainActivity : HelperBaseComponentActivity() {
         // Clear API credentials/consent left by older builds; all VPN controls now work locally.
         VorzexInstallationStore(this)
         mainViewModel.onAction(MainAction.Initialize)
+        handleExternalConfigIntent(intent)
 
         // If an AI_CON tunnel unexpectedly stops, attempt a bounded, verified fallback.
         // Manual disconnects are explicitly suppressed; repeated failures are rate-limited.
@@ -191,6 +216,81 @@ class MainActivity : HelperBaseComponentActivity() {
         checkAndRequestPermission(PermissionType.POST_NOTIFICATIONS) {}
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleExternalConfigIntent(intent)
+    }
+
+    private fun handleExternalConfigIntent(incoming: Intent?) {
+        if (incoming == null) return
+        val uri: Uri? = when (incoming.action) {
+            Intent.ACTION_VIEW -> incoming.data
+            Intent.ACTION_SEND -> {
+                if (incoming.type != "text/plain") {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        incoming.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        incoming.getParcelableExtra(Intent.EXTRA_STREAM)
+                    }
+                } else null
+            }
+            else -> null
+        }
+        if (uri != null) {
+            lifecycleScope.launch {
+                delay(350)
+                importExchangeUri(uri)
+            }
+        } else if (incoming.action == Intent.ACTION_SEND && incoming.type == "text/plain") {
+            val sharedText = incoming.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
+            if (sharedText.contains("VORZEX_CONFIG_EXCHANGE")) {
+                lifecycleScope.launch {
+                    delay(350)
+                    importExchangeText(sharedText, "shared.VXV")
+                }
+            }
+        }
+    }
+
+    private fun importExchangeUri(uri: Uri) {
+        try {
+            val displayName = runCatching {
+                contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)
+                    ?.use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
+            }.getOrNull().orEmpty()
+            val content = contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
+                ?: throw IllegalArgumentException("The selected file could not be read")
+            importExchangeText(content, displayName.ifBlank { uri.lastPathSegment.orEmpty() })
+        } catch (e: Exception) {
+            LogUtil.e(AppConfig.TAG, "Failed to import shared VØRZEX configuration", e)
+            toastError(R.string.toast_failure)
+        }
+    }
+
+    private fun importExchangeText(content: String, displayName: String) {
+        when {
+            com.v2ray.ang.util.VorzexConfigExchange.isRecognizedExchangeExtension(displayName) ||
+                content.contains("VORZEX_CONFIG_EXCHANGE") -> {
+                when (val decoded = com.v2ray.ang.util.VorzexConfigExchange.decode(content)) {
+                    is com.v2ray.ang.util.VorzexConfigExchange.DecodeResult.Success -> {
+                        mainViewModel.onAction(MainAction.ImportVZVProfiles(decoded.profiles.map { it.content }))
+                        toastSuccess(R.string.toast_success)
+                    }
+                    is com.v2ray.ang.util.VorzexConfigExchange.DecodeResult.Failure -> {
+                        LogUtil.w(AppConfig.TAG, "Rejected VØRZEX exchange file: ${decoded.reason}")
+                        toastError(R.string.toast_failure)
+                    }
+                }
+            }
+            com.v2ray.ang.util.VorzexConfigExchange.isNpvExtension(displayName) -> {
+                toastError(R.string.npv_import_not_supported)
+            }
+            else -> mainViewModel.onAction(MainAction.ImportBatchConfig(content))
+        }
+    }
+
     override fun onStart() {
         super.onStart()
         // The service can have gone away while the screen was not shown, without a word if its process died.
@@ -209,6 +309,8 @@ class MainActivity : HelperBaseComponentActivity() {
                     MainAction.ImportQRcode -> importQRcode()
                     MainAction.ImportClipboard -> importClipboard()
                     MainAction.ImportConfigLocal -> importConfigLocal()
+                    MainAction.ExportVZV -> exportAllVZV()
+                    MainAction.ShareVZV -> shareAllVZV()
                     MainAction.GenerateAiConfig -> startAiConfigQuickSetup()
                     MainAction.OpenDnsLab -> settingsActivityLauncher.launch(
                         Intent(this, NetworkLabActivity::class.java)
@@ -495,15 +597,94 @@ class MainActivity : HelperBaseComponentActivity() {
         }
     }
 
+
+    /**
+     * Exports each stored profile as a portable Xray JSON payload inside the versioned VZV envelope.
+     * The runtime builder is used so the exported JSON is a real configuration, not just a renamed file.
+     */
+    private fun buildVZVExport(): String {
+        val payloads = MmkvManager.decodeAllServerList().mapNotNull { guid ->
+            val profile = MmkvManager.decodeServerConfig(guid) ?: return@mapNotNull null
+            val result = com.v2ray.ang.core.CoreConfigManager.getV2rayConfig(this, guid)
+            if (!result.status || result.content.isBlank()) return@mapNotNull null
+            com.v2ray.ang.util.VorzexConfigExchange.ProfilePayload(
+                name = profile.remarks.ifBlank { "VØRZEX profile" },
+                type = "xray-json",
+                content = result.content
+            )
+        }
+        if (payloads.isEmpty()) throw IllegalStateException(getString(R.string.vzv_export_no_profiles))
+        return com.v2ray.ang.util.VorzexConfigExchange.encode(payloads)
+    }
+
+    private fun exportAllVZV() {
+        try {
+            pendingVZVExport = buildVZVExport()
+            vzvDocumentLauncher.launch("Vorzex-configs.VXV")
+        } catch (e: Exception) {
+            pendingVZVExport = null
+            LogUtil.e(AppConfig.TAG, "Failed to prepare VZV export", e)
+            toastError(R.string.vzv_export_no_profiles)
+        }
+    }
+
+    private fun shareAllVZV() {
+        try {
+            val payload = buildVZVExport()
+            val shareDir = File(cacheDir, "shared-configs").apply { mkdirs() }
+            val shareFile = File(shareDir, "Vorzex-configs.VXV")
+            shareFile.writeText(payload, Charsets.UTF_8)
+            val uri = FileProvider.getUriForFile(this, "${packageName}.cache", shareFile)
+            val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                type = com.v2ray.ang.util.VorzexConfigExchange.MIME_TYPE
+                putExtra(Intent.EXTRA_SUBJECT, "VØRZEX VPN configuration (.VXV)")
+                putExtra(Intent.EXTRA_STREAM, uri)
+                clipData = ClipData.newUri(contentResolver, "VØRZEX VPN configuration", uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(Intent.createChooser(sendIntent, getString(R.string.vzv_share_title)))
+        } catch (e: Exception) {
+            LogUtil.e(AppConfig.TAG, "Failed to prepare VØRZEX share", e)
+            toastError(R.string.vzv_export_no_profiles)
+        }
+    }
+
     private fun importConfigLocal() {
         launchFileChooser { uri ->
             if (uri == null) return@launchFileChooser
             try {
-                contentResolver.openInputStream(uri)?.bufferedReader()?.use { reader ->
-                    mainViewModel.onAction(MainAction.ImportBatchConfig(reader.readText()))
+                val displayName = runCatching {
+                    contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)
+                        ?.use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
+                }.getOrNull().orEmpty()
+                val content = contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                    ?: throw IllegalArgumentException("The selected file could not be read")
+
+                when {
+                    com.v2ray.ang.util.VorzexConfigExchange.isRecognizedExchangeExtension(displayName) -> {
+                        when (val decoded = com.v2ray.ang.util.VorzexConfigExchange.decode(content)) {
+                            is com.v2ray.ang.util.VorzexConfigExchange.DecodeResult.Success -> {
+                                // Import all payloads in one operation so asynchronous imports cannot race.
+                                // The existing parser remains responsible for validating each Xray entry.
+                                mainViewModel.onAction(MainAction.ImportVZVProfiles(decoded.profiles.map { it.content }))
+                                toastSuccess(R.string.toast_success)
+                            }
+                            is com.v2ray.ang.util.VorzexConfigExchange.DecodeResult.Failure -> {
+                                toastError(R.string.toast_failure)
+                                LogUtil.w(AppConfig.TAG, "Rejected VZV exchange file: ${decoded.reason}")
+                            }
+                        }
+                    }
+                    com.v2ray.ang.util.VorzexConfigExchange.isNpvExtension(displayName) -> {
+                        // NPV/NPVS are proprietary formats. Never silently reinterpret them as Xray text.
+                        toastError(R.string.npv_import_not_supported)
+                        LogUtil.w(AppConfig.TAG, "NPV/NPVS import needs a verified format-specific decoder")
+                    }
+                    else -> mainViewModel.onAction(MainAction.ImportBatchConfig(content))
                 }
             } catch (e: Exception) {
-                LogUtil.e(AppConfig.TAG, "Failed to read content from URI", e)
+                LogUtil.e(AppConfig.TAG, "Failed to read configuration file", e)
+                toastError(R.string.toast_failure)
             }
         }
     }
