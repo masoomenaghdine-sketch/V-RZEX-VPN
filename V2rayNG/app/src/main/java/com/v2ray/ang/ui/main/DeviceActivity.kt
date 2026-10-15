@@ -60,17 +60,12 @@ private fun DeviceScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text("VØRZEX · Device", style = MaterialTheme.typography.headlineSmall, color = Color(0xFF70F0FF))
-            Text(
-                "اطلاعات این صفحه فقط روی همین گوشی نمایش داده می‌شود. شناسه، مدل دستگاه، نسخهٔ اندروید، IP محلی، رویدادهای اتصال و اطلاعات استفاده به ربات یا API ارسال نمی‌شوند. برای واردکردن کانفیگ عمومی، فقط منبعی که خودت انتخاب می‌کنی دریافت می‌شود و اطلاعات دستگاه همراه آن فرستاده نمی‌شود.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFFCBD5E1)
-            )
-            DeviceInfoCard("مدل دستگاه (محلی)", deviceName)
-            DeviceInfoCard("نسخهٔ اندروید (محلی)", androidVersion)
+            DeviceInfoCard("دستگاه", deviceName)
+            DeviceInfoCard("اندروید", androidVersion)
             DeviceInfoCard("نسخهٔ برنامه", appVersion)
-            DeviceInfoCard("شناسهٔ محلی ۱۲ رقمی (ارسال نمی‌شود)", deviceCode)
+            DeviceInfoCard("شناسه", deviceCode)
             Button(modifier = Modifier.fillMaxWidth(), onClick = onBack) {
-                Text("بازگشت به صفحهٔ اصلی")
+                Text("بازگشت")
             }
         }
     }
