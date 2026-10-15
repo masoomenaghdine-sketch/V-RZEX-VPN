@@ -75,6 +75,25 @@ class MainActivity : HelperBaseComponentActivity() {
             if (it.resultCode == RESULT_OK) startV2Ray()
         }
 
+    private val vzvDocumentLauncher =
+        registerForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.vorzex.config+json")) { uri ->
+            if (uri == null) {
+                pendingVZVExport = null
+                return@registerForActivityResult
+            }
+            val payload = pendingVZVExport
+            pendingVZVExport = null
+            try {
+                if (payload.isNullOrBlank()) throw IllegalStateException("No VZV export data")
+                contentResolver.openOutputStream(uri)?.bufferedWriter(Charsets.UTF_8)?.use { it.write(payload) }
+                    ?: throw IllegalStateException("Cannot write the selected file")
+                toastSuccess(R.string.vzv_export_saved)
+            } catch (e: Exception) {
+                LogUtil.e(AppConfig.TAG, "Failed to write VZV export", e)
+                toastError(R.string.toast_failure)
+            }
+        }
+
     private val profileEditorLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode != RESULT_OK) {
@@ -209,6 +228,8 @@ class MainActivity : HelperBaseComponentActivity() {
                     MainAction.ImportQRcode -> importQRcode()
                     MainAction.ImportClipboard -> importClipboard()
                     MainAction.ImportConfigLocal -> importConfigLocal()
+                    MainAction.ExportVZV -> exportAllVZV()
+                    MainAction.ShareVZV -> shareAllVZV()
                     MainAction.GenerateAiConfig -> startAiConfigQuickSetup()
                     MainAction.OpenDnsLab -> settingsActivityLauncher.launch(
                         Intent(this, NetworkLabActivity::class.java)
@@ -492,6 +513,52 @@ class MainActivity : HelperBaseComponentActivity() {
             mainViewModel.onAction(MainAction.ImportBatchConfig(text))
         } catch (e: Exception) {
             LogUtil.e(AppConfig.TAG, "Failed to import config from clipboard", e)
+        }
+    }
+
+
+    /**
+     * Exports each stored profile as a portable Xray JSON payload inside the versioned VZV envelope.
+     * The runtime builder is used so the exported JSON is a real configuration, not just a renamed file.
+     */
+    private fun buildVZVExport(): String {
+        val payloads = MmkvManager.decodeAllServerList().mapNotNull { guid ->
+            val profile = MmkvManager.decodeServerConfig(guid) ?: return@mapNotNull null
+            val result = com.v2ray.ang.core.CoreConfigManager.getV2rayConfig(this, guid)
+            if (!result.status || result.content.isBlank()) return@mapNotNull null
+            com.v2ray.ang.util.VorzexConfigExchange.ProfilePayload(
+                name = profile.remarks.ifBlank { "VØRZEX profile" },
+                type = "xray-json",
+                content = result.content
+            )
+        }
+        if (payloads.isEmpty()) throw IllegalStateException(getString(R.string.vzv_export_no_profiles))
+        return com.v2ray.ang.util.VorzexConfigExchange.encode(payloads)
+    }
+
+    private fun exportAllVZV() {
+        try {
+            pendingVZVExport = buildVZVExport()
+            vzvDocumentLauncher.launch("Vorzex-configs.vzv")
+        } catch (e: Exception) {
+            pendingVZVExport = null
+            LogUtil.e(AppConfig.TAG, "Failed to prepare VZV export", e)
+            toastError(R.string.vzv_export_no_profiles)
+        }
+    }
+
+    private fun shareAllVZV() {
+        try {
+            val payload = buildVZVExport()
+            val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_SUBJECT, "VØRZEX VPN configuration (.VZV)")
+                putExtra(Intent.EXTRA_TEXT, payload)
+            }
+            startActivity(Intent.createChooser(sendIntent, getString(R.string.vzv_share_title)))
+        } catch (e: Exception) {
+            LogUtil.e(AppConfig.TAG, "Failed to prepare VZV share", e)
+            toastError(R.string.vzv_export_no_profiles)
         }
     }
 
