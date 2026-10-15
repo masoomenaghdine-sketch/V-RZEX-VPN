@@ -118,11 +118,11 @@
     <string name="toast_success">Success</string>
     <string name="toast_failure">Failure</string>
     <string name="npv_import_not_supported">NPV/NPVS import is not supported yet: a verified decoder is required.</string>
-    <string name="vzv_export_menu">Export all as VZV</string>
-    <string name="vzv_share_menu">Share all as VZV text</string>
-    <string name="vzv_export_saved">VZV file saved successfully</string>
+    <string name="vzv_export_menu">Export all as VXV file</string>
+    <string name="vzv_share_menu">Share all as VXV file</string>
+    <string name="vzv_export_saved">VXV file saved successfully</string>
     <string name="vzv_export_no_profiles">No exportable profiles were found</string>
-    <string name="vzv_share_title">Share VØRZEX VZV configuration</string>
+    <string name="vzv_share_title">Share VØRZEX VXV configuration</string>
     <string name="toast_none_data">No data available</string>
     <string name="toast_incorrect_protocol">Incorrect protocol</string>
     <string name="toast_decoding_failed">Decoding failed</string>
