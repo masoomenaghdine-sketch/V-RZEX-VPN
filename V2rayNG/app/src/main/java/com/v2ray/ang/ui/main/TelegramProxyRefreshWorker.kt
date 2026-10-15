@@ -70,7 +70,7 @@ class TelegramProxyRefreshWorker(
                 .lineSequence()
                 .map(String::trim)
                 .filter(String::isNotEmpty)
-                .filter(TelegramProxyFeed::isValidProxyLink)
+                .filter { TelegramProxyFeed.isValidProxyLink(it) }
                 .distinct()
                 .toList()
 
