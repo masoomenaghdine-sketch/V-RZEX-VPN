@@ -86,6 +86,7 @@ sealed interface MainAction {
     data object DismissQRCodeDialog : MainAction
 
     data class ImportBatchConfig(val configText: String) : MainAction
+    data class ImportVZVProfiles(val configs: List<String>) : MainAction
 
     data object LocateHandled : MainAction
 
