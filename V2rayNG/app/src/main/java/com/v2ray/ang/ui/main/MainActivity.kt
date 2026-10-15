@@ -63,6 +63,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 class MainActivity : HelperBaseComponentActivity() {
     private var pendingAetherQuickConnect = false
+    private var pendingVZVExport: String? = null
     private val aiAutoConnectInProgress = AtomicBoolean(false)
     @Volatile private var suppressAiFailoverOnce = false
     @Volatile private var lastAiFailoverAtMs = 0L
