@@ -797,8 +797,8 @@
     <string name="dns_lab_explanation">Smart Gaming DNS tests encrypted DNS-over-HTTPS endpoints on your current route. It ranks only resolvers that pass all three checks and can set a Primary plus a separate Backup. DNS response time is not the same as in-game ping.</string>
     <string name="dns_scan_button">Scan DNS providers</string>
     <string name="dns_auto_select_button">Smart Gaming DNS · Auto Primary + Backup</string>
-    <string name="dns_result_success">%1$d ms median · 3/3 responses</string>
-    <string name="dns_result_unstable">Unstable or unreachable · fewer than 3 responses</string>
+    <string name="dns_result_success">%1$d ms median · %2$d/3 responses · %3$d ms jitter</string>
+    <string name="dns_result_partial">Partial/unreliable · %1$d/%2$d responses</string>
     <string name="dns_result_not_tested">Not tested yet</string>
     <string name="dns_apply_button">Use this DNS for Xray</string>
     <string name="dns_selected_confirmation">Selected DNS: %1$s. Return to the main screen to restart the service.</string>
