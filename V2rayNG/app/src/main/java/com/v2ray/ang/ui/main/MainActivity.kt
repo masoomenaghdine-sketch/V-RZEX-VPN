@@ -499,11 +499,40 @@ class MainActivity : HelperBaseComponentActivity() {
         launchFileChooser { uri ->
             if (uri == null) return@launchFileChooser
             try {
-                contentResolver.openInputStream(uri)?.bufferedReader()?.use { reader ->
-                    mainViewModel.onAction(MainAction.ImportBatchConfig(reader.readText()))
+                val displayName = runCatching {
+                    contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)
+                        ?.use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
+                }.getOrNull().orEmpty()
+                val content = contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                    ?: throw IllegalArgumentException("The selected file could not be read")
+
+                when {
+                    com.v2ray.ang.util.VorzexConfigExchange.isRecognizedExchangeExtension(displayName) -> {
+                        when (val decoded = com.v2ray.ang.util.VorzexConfigExchange.decode(content)) {
+                            is com.v2ray.ang.util.VorzexConfigExchange.DecodeResult.Success -> {
+                                // Reuse the existing profile import pipeline for each supported payload.
+                                // Payloads remain subject to the app's own parser and validation.
+                                decoded.profiles.forEach { profile ->
+                                    mainViewModel.onAction(MainAction.ImportBatchConfig(profile.content))
+                                }
+                                toastSuccess(R.string.toast_success)
+                            }
+                            is com.v2ray.ang.util.VorzexConfigExchange.DecodeResult.Failure -> {
+                                toastError(R.string.toast_failure)
+                                LogUtil.w(AppConfig.TAG, "Rejected VZV exchange file: ${decoded.reason}")
+                            }
+                        }
+                    }
+                    com.v2ray.ang.util.VorzexConfigExchange.isNpvExtension(displayName) -> {
+                        // NPV/NPVS are proprietary formats. Never silently reinterpret them as Xray text.
+                        toastError(R.string.toast_failure)
+                        LogUtil.w(AppConfig.TAG, "NPV/NPVS import needs a verified format-specific decoder")
+                    }
+                    else -> mainViewModel.onAction(MainAction.ImportBatchConfig(content))
                 }
             } catch (e: Exception) {
-                LogUtil.e(AppConfig.TAG, "Failed to read content from URI", e)
+                LogUtil.e(AppConfig.TAG, "Failed to read configuration file", e)
+                toastError(R.string.toast_failure)
             }
         }
     }
