@@ -113,6 +113,20 @@ class MainActivity : HelperBaseComponentActivity() {
             if (restartService || selectedProfileSaved) LauncherManager.restartService(this)
         }
 
+    private val torCenterLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK) {
+                val bridgeMode = result.data?.getStringExtra(ServerAetherActivity.EXTRA_TOR_BRIDGE_MODE)
+                    ?: com.v2ray.ang.enums.AetherTorBridges.AUTO.type
+                pendingAetherQuickConnect = true
+                profileEditorLauncher.launch(
+                    Intent(this, ServerAetherActivity::class.java)
+                        .putExtra(ServerAetherActivity.EXTRA_TOR_QUICK_SETUP, true)
+                        .putExtra(ServerAetherActivity.EXTRA_TOR_BRIDGE_MODE, bridgeMode)
+                )
+            }
+        }
+
     private val settingsActivityLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             val restartService = SettingsChangeManager.consumeRestartService()
@@ -376,14 +390,9 @@ class MainActivity : HelperBaseComponentActivity() {
             return
         }
         if (destination == MainDestination.TorNetwork) {
-            // Open a Tor-only starter profile in the existing Aether editor. The existing
-            // Tor/lyrebird engine is reused; existing VPN profiles and settings remain intact.
-            // Use the result launcher so saving the starter profile selects it and starts the VPN.
-            pendingAetherQuickConnect = true
-            profileEditorLauncher.launch(
-                Intent(this, ServerAetherActivity::class.java)
-                    .putExtra(ServerAetherActivity.EXTRA_TOR_QUICK_SETUP, true)
-            )
+            // Dedicated Tor Center offers profile presets while reusing the existing Tor engine.
+            // The Tor screen never rewrites or removes existing Xray profiles.
+            torCenterLauncher.launch(Intent(this, TorCenterActivity::class.java))
             return
         }
         val intent = when (destination) {

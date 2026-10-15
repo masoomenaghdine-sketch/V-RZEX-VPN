@@ -87,6 +87,7 @@ import java.util.Locale
 class ServerAetherActivity : BaseServerActivity() {
     companion object {
         const val EXTRA_TOR_QUICK_SETUP = "tor_quick_setup"
+        const val EXTRA_TOR_BRIDGE_MODE = "tor_bridge_mode"
         const val EXTRA_PSIPHON_QUICK_SETUP = "psiphon_quick_setup"
         const val EXTRA_AI_QUICK_SETUP = "ai_quick_setup"
     }
@@ -118,7 +119,9 @@ class ServerAetherActivity : BaseServerActivity() {
                 if (editGuid.isBlank() && intent.getBooleanExtra(EXTRA_TOR_QUICK_SETUP, false)) {
                     remarks = getString(R.string.tor_profile_name)
                     aetherTor = AetherTor.ONLY.type
-                    aetherTorBridges = AetherTorBridges.AUTO.type
+                    aetherTorBridges = intent.getStringExtra(EXTRA_TOR_BRIDGE_MODE)
+                        ?.takeIf { mode -> AetherTorBridges.entries.any { it.type == mode } }
+                        ?: AetherTorBridges.AUTO.type
                     aetherTorRelays = AetherTorRelays.AUTO.type
                     aetherPsiphon = AetherPsiphon.OFF.type
                 }

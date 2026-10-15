@@ -28,6 +28,8 @@ data class DnsResolverResult(
     val testUrl: String,
     val latencyMs: Long? = null,
     val successful: Boolean? = null,
+    val successfulSamples: Int = 0,
+    val jitterMs: Long? = null,
 )
 
 data class NetworkLabState(
@@ -81,6 +83,9 @@ class NetworkLabViewModel : ViewModel() {
                             resolver.copy(
                                 latencyMs = samples.sorted().getOrNull(samples.size / 2),
                                 successful = samples.size == attempts,
+                                successfulSamples = samples.size,
+                                jitterMs = samples.zipWithNext { first, second -> abs(first - second) }
+                                    .takeIf { it.isNotEmpty() }?.average()?.toLong(),
                             )
                         }
                     }.awaitAll()
@@ -91,17 +96,30 @@ class NetworkLabViewModel : ViewModel() {
             var selectedDns = _state.value.selectedDns
             var error: String? = null
             if (autoApplyBest) {
-                val best = results.firstOrNull {
+                // Prefer two independently reachable DoH resolvers so the core can
+                // fall back if the primary resolver becomes unavailable. Only tested HTTPS
+                // DoH endpoints are eligible; never replace a working setting with an untested list.
+                val working = results.filter {
                     it.successful == true && it.latencyMs != null &&
                         it.coreAddress.startsWith("https://", ignoreCase = true)
                 }
-                if (best == null) {
+                val primary = working.firstOrNull()
+                val secondary = working.firstOrNull { candidate ->
+                    primary != null && runCatching {
+                        Uri.parse(candidate.coreAddress).host != Uri.parse(primary.coreAddress).host
+                    }.getOrDefault(false)
+                }
+                if (primary == null) {
                     error = "no_dns"
-                } else if (MmkvManager.encodeSettings(AppConfig.PREF_REMOTE_DNS, best.coreAddress)) {
-                    SettingsChangeManager.notifySettingChanged(AppConfig.PREF_REMOTE_DNS)
-                    selectedDns = best.coreAddress
                 } else {
-                    error = "save_error"
+                    val orderedResolvers = listOfNotNull(primary, secondary)
+                    val dnsChain = orderedResolvers.joinToString(",") { it.coreAddress }
+                    if (MmkvManager.encodeSettings(AppConfig.PREF_REMOTE_DNS, dnsChain)) {
+                        SettingsChangeManager.notifySettingChanged(AppConfig.PREF_REMOTE_DNS)
+                        selectedDns = dnsChain
+                    } else {
+                        error = "save_error"
+                    }
                 }
             }
             _state.value = _state.value.copy(
@@ -148,8 +166,13 @@ class NetworkLabViewModel : ViewModel() {
                 gamingLossPercent = null,
                 error = null,
             )
+            // Alternate independent HTTPS endpoints. This measures connection response,
+            // not ICMP ping and not the DNS resolver latency measured above.
             val timings = withContext(Dispatchers.IO) {
-                (1..10).map { probeHttp(AppConfig.DELAY_TEST_URL, timeoutMs = 2500) }
+                (1..10).map { sample ->
+                    val endpoint = if (sample % 2 == 0) AppConfig.DELAY_TEST_URL2 else AppConfig.DELAY_TEST_URL
+                    probeHttp(endpoint, timeoutMs = 2500)
+                }
             }
             val good = timings.filterNotNull()
             val average = good.takeIf { it.isNotEmpty() }?.average()?.toLong()
