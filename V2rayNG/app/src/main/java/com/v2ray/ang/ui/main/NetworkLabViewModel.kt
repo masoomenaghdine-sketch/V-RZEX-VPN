@@ -30,8 +30,18 @@ data class DnsResolverResult(
     val successful: Boolean? = null,
 )
 
+data class NetworkEndpointResult(
+    val name: String,
+    val url: String,
+    val latencyMs: Long? = null,
+    val successfulSamples: Int = 0,
+    val totalSamples: Int = 3,
+)
+
 data class NetworkLabState(
     val resolvers: List<DnsResolverResult> = NetworkLabViewModel.defaultResolvers,
+    val endpointResults: List<NetworkEndpointResult> = NetworkLabViewModel.defaultEndpoints,
+    val isTestingEndpoints: Boolean = false,
     val isScanningDns: Boolean = false,
     val isTestingGaming: Boolean = false,
     val selectedDns: String? = null,
@@ -135,6 +145,31 @@ class NetworkLabViewModel : ViewModel() {
             if (enabled) scanDns(autoApplyBest = true)
         } else {
             _state.value = _state.value.copy(error = "save_error")
+        }
+    }
+
+    fun testNetworkEndpoints() {
+        if (_state.value.isTestingEndpoints) return
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isTestingEndpoints = true, endpointResults = defaultEndpoints)
+            val results = withContext(Dispatchers.IO) {
+                coroutineScope {
+                    defaultEndpoints.map { endpoint ->
+                        async {
+                            val samples = (1..endpoint.totalSamples).map {
+                                probeHttp(endpoint.url, timeoutMs = 2500)
+                            }
+                            endpoint.copy(
+                                latencyMs = samples.filterNotNull().sorted().let { good ->
+                                    good.getOrNull(good.size / 2)
+                                },
+                                successfulSamples = samples.count { it != null },
+                            )
+                        }
+                    }.awaitAll()
+                }
+            }
+            _state.value = _state.value.copy(isTestingEndpoints = false, endpointResults = results)
         }
     }
 
@@ -283,6 +318,13 @@ class NetworkLabViewModel : ViewModel() {
             "https://raw.githubusercontent.com/10ium/Public-DNS-Collector/main/lists/doh.txt"
         private const val COMMUNITY_RESOLVERS_PER_SCAN = 18
         private const val MAX_RESOLVERS_PER_SCAN = 21
+
+        val defaultEndpoints = listOf(
+            NetworkEndpointResult("Google", "https://www.google.com/generate_204"),
+            NetworkEndpointResult("Cloudflare", "https://www.cloudflare.com/cdn-cgi/trace"),
+            NetworkEndpointResult("YouTube", "https://www.youtube.com/generate_204"),
+            NetworkEndpointResult("Instagram", "https://www.instagram.com/"),
+        )
 
         val defaultResolvers = listOf(
             DnsResolverResult(
