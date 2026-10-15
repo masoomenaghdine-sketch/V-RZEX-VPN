@@ -510,11 +510,10 @@ class MainActivity : HelperBaseComponentActivity() {
                     com.v2ray.ang.util.VorzexConfigExchange.isRecognizedExchangeExtension(displayName) -> {
                         when (val decoded = com.v2ray.ang.util.VorzexConfigExchange.decode(content)) {
                             is com.v2ray.ang.util.VorzexConfigExchange.DecodeResult.Success -> {
-                                // Reuse the existing profile import pipeline for each supported payload.
-                                // Payloads remain subject to the app's own parser and validation.
-                                decoded.profiles.forEach { profile ->
-                                    mainViewModel.onAction(MainAction.ImportBatchConfig(profile.content))
-                                }
+                                // Import all payloads in one operation so asynchronous imports cannot race.
+                                // The existing parser remains responsible for validating each Xray entry.
+                                val batch = decoded.profiles.joinToString("\n") { it.content }
+                                mainViewModel.onAction(MainAction.ImportBatchConfig(batch))
                                 toastSuccess(R.string.toast_success)
                             }
                             is com.v2ray.ang.util.VorzexConfigExchange.DecodeResult.Failure -> {
