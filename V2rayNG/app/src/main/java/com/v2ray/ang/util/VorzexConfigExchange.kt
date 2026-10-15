@@ -11,7 +11,7 @@ import org.json.JSONObject
  * format-specific adapter before they can be converted to Xray profiles.
  */
 object VorzexConfigExchange {
-    const val FILE_EXTENSION = "vzv"
+    const val FILE_EXTENSION = "vxv"
     const val MIME_TYPE = "application/vnd.vorzex.config+json"
     private const val FORMAT = "VORZEX_CONFIG_EXCHANGE"
     private const val CURRENT_VERSION = 1
@@ -113,9 +113,11 @@ object VorzexConfigExchange {
      * Do not treat these formats as interchangeable. A decoder for the real NPV
      * binary/container format must be implemented and verified separately.
      */
-    fun isRecognizedExchangeExtension(fileName: String): Boolean =
-        fileName.substringAfterLast('.', missingDelimiterValue = "")
-            .equals(FILE_EXTENSION, ignoreCase = true)
+    fun isRecognizedExchangeExtension(fileName: String): Boolean {
+        val extension = fileName.substringAfterLast('.', missingDelimiterValue = "")
+        return extension.equals(FILE_EXTENSION, ignoreCase = true) ||
+            extension.equals("vzv", ignoreCase = true)
+    }
 
     fun isNpvExtension(fileName: String): Boolean {
         val extension = fileName.substringAfterLast('.', missingDelimiterValue = "")
