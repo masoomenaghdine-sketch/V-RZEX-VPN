@@ -272,7 +272,7 @@ class MainActivity : HelperBaseComponentActivity() {
     private fun importExchangeText(content: String, displayName: String) {
         when {
             com.v2ray.ang.util.VorzexConfigExchange.isRecognizedExchangeExtension(displayName) ||
-                content.contains("\"format\":\"VORZEX_CONFIG_EXCHANGE\"") -> {
+                content.contains("VORZEX_CONFIG_EXCHANGE") -> {
                 when (val decoded = com.v2ray.ang.util.VorzexConfigExchange.decode(content)) {
                     is com.v2ray.ang.util.VorzexConfigExchange.DecodeResult.Success -> {
                         mainViewModel.onAction(MainAction.ImportVZVProfiles(decoded.profiles.map { it.content }))
