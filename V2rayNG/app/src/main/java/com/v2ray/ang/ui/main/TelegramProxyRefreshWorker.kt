@@ -13,11 +13,11 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
-import java.net.URL
+import java.net.HttpURLConnection
 import java.net.URI
+import java.net.URL
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
-import java.net.URLConnection
 import java.util.concurrent.TimeUnit
 
 class TelegramProxyRefreshWorker(
@@ -70,6 +70,7 @@ class TelegramProxyRefreshWorker(
                 .lineSequence()
                 .map(String::trim)
                 .filter(String::isNotEmpty)
+                .filter(TelegramProxyFeed::isValidProxyLink)
                 .distinct()
                 .toList()
 
@@ -78,9 +79,9 @@ class TelegramProxyRefreshWorker(
                 .getLong(KEY_LAST_REFRESH, 0L)
 
         suspend fun refreshNow(context: Context): List<String> = withContext(Dispatchers.IO) {
-            TelegramProxyFeed.fetch().also { proxies ->
-                if (proxies.isNotEmpty()) saveProxies(context.applicationContext, proxies)
-            }
+            val fresh = TelegramProxyFeed.fetch()
+            if (fresh.isNotEmpty()) saveProxies(context.applicationContext, fresh)
+            fresh
         }
     }
 }
@@ -109,7 +110,11 @@ internal object TelegramProxyFeed {
     }
 
     internal fun parseProxyLinks(body: String): List<String> {
-        val normalized = body.replace("&amp;", "&").replace("&#38;", "&")
+        val normalized = body
+            .replace("&amp;", "&")
+            .replace("&#38;", "&")
+            .replace("&quot;", "\"")
+            .replace("&#39;", "'")
         return PROXY_LINK.findAll(normalized)
             .map { it.value.trimEnd('.', ',', ')', ']', ';') }
             .filter(::isValidProxyLink)
@@ -117,17 +122,28 @@ internal object TelegramProxyFeed {
             .toList()
     }
 
-    private fun isValidProxyLink(value: String): Boolean {
+    internal fun isValidProxyLink(value: String): Boolean {
         return try {
-            val query = URI(value).rawQuery ?: return false
+            val uri = URI(value)
+            val validSchemeAndHost = when (uri.scheme?.lowercase()) {
+                "tg" -> uri.host.equals("proxy", ignoreCase = true)
+                "https", "http" -> uri.host.equals("t.me", ignoreCase = true) &&
+                    uri.path.equals("/proxy", ignoreCase = true)
+                else -> false
+            }
+            if (!validSchemeAndHost) return false
+            val query = uri.rawQuery ?: return false
             val params = query.split("&").mapNotNull { part ->
                 val separator = part.indexOf('=')
                 if (separator <= 0) null else {
                     URLDecoder.decode(part.substring(0, separator), StandardCharsets.UTF_8.name()) to
-                        URLDecoder.decode(part.substring(separator + 1).replace("+", "%2B"), StandardCharsets.UTF_8.name())
+                        URLDecoder.decode(
+                            part.substring(separator + 1).replace("+", "%2B"),
+                            StandardCharsets.UTF_8.name()
+                        )
                 }
             }.toMap()
-            val server = params["server"].orEmpty()
+            val server = params["server"].orEmpty().removeSuffix(".")
             val port = params["port"]?.toIntOrNull() ?: return false
             val secret = params["secret"].orEmpty()
             server.isNotBlank() && port in 1..65535 &&
@@ -138,11 +154,32 @@ internal object TelegramProxyFeed {
     }
 
     private fun readSource(source: String): List<String> {
-        val connection: URLConnection = URL(source).openConnection()
-        connection.connectTimeout = 7000
-        connection.readTimeout = 7000
+        val connection = URL(source).openConnection() as HttpURLConnection
+        connection.connectTimeout = 10_000
+        connection.readTimeout = 12_000
+        connection.instanceFollowRedirects = true
         connection.setRequestProperty("User-Agent", "Mozilla/5.0 VORZEX-PT")
-        val body = connection.getInputStream().bufferedReader(Charsets.UTF_8).use { it.readText() }
-        return parseProxyLinks(body)
+        connection.setRequestProperty("Accept", "text/plain,text/html,*/*")
+        return try {
+            val code = connection.responseCode
+            if (code !in 200..299) return emptyList()
+            connection.inputStream.bufferedReader(Charsets.UTF_8).use { reader ->
+                val body = StringBuilder()
+                val buffer = CharArray(8192)
+                var total = 0
+                while (true) {
+                    val count = reader.read(buffer)
+                    if (count < 0) break
+                    total += count
+                    if (total > MAX_SOURCE_CHARS) break
+                    body.append(buffer, 0, count)
+                }
+                parseProxyLinks(body.toString())
+            }
+        } finally {
+            connection.disconnect()
+        }
     }
+
+    private const val MAX_SOURCE_CHARS = 2_000_000
 }
