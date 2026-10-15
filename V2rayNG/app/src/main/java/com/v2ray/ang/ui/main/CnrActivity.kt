@@ -30,7 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.activity.compose.setContent
 
-private data class CnrSource(val title: String, val detail: String, val url: String)
+private data class CnrSource(val title: String, val url: String)
 
 class CnrActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,32 +64,26 @@ private fun CnrScreen(onImport: (String) -> Unit, onBackToConnect: () -> Unit) {
     val sources = listOf(
         CnrSource(
             "همهٔ کانفیگ‌ها",
-            "فهرست عمومی تجمیع‌شده؛ ممکن است بعضی سرورها از دسترس خارج شده باشند",
             "https://raw.githubusercontent.com/MohammadBahemmat/V2ray-Collector/main/all_servers.txt"
         ),
         CnrSource(
             "VLESS",
-            "کانفیگ‌های VLESS",
             "https://raw.githubusercontent.com/MohammadBahemmat/V2ray-Collector/main/servers/vless_servers.txt"
         ),
         CnrSource(
             "VMess",
-            "کانفیگ‌های VMess",
             "https://raw.githubusercontent.com/MohammadBahemmat/V2ray-Collector/main/servers/vmess_servers.txt"
         ),
         CnrSource(
             "Trojan",
-            "کانفیگ‌های Trojan",
             "https://raw.githubusercontent.com/MohammadBahemmat/V2ray-Collector/main/servers/trojan_servers.txt"
         ),
         CnrSource(
             "Hysteria 2",
-            "کانفیگ‌های Hysteria2",
             "https://raw.githubusercontent.com/MohammadBahemmat/V2ray-Collector/main/servers/hysteria2_servers.txt"
         ),
         CnrSource(
             "Shadowsocks",
-            "کانفیگ‌های Shadowsocks",
             "https://raw.githubusercontent.com/MohammadBahemmat/V2ray-Collector/main/servers/ss_servers.txt"
         )
     )
@@ -108,11 +102,6 @@ private fun CnrScreen(onImport: (String) -> Unit, onBackToConnect: () -> Unit) {
                 style = MaterialTheme.typography.titleMedium,
                 color = Color.White
             )
-            Text(
-                "یک منبع را انتخاب کن تا کانفیگ‌ها از مخزن عمومی وارد فهرست برنامه شوند. کانفیگ‌های عمومی ممکن است ناپایدار یا نامعتبر باشند؛ قبل از اتصال، آن‌ها را بررسی کن.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFFCBD5E1)
-            )
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -127,7 +116,6 @@ private fun CnrScreen(onImport: (String) -> Unit, onBackToConnect: () -> Unit) {
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(source.title, style = MaterialTheme.typography.titleMedium, color = Color(0xFF9DF6D5))
-                            Text(source.detail, style = MaterialTheme.typography.bodySmall, color = Color(0xFFD5DDF0))
                             Button(
                                 modifier = Modifier.fillMaxWidth(),
                                 onClick = { onImport(source.url) }
@@ -139,7 +127,7 @@ private fun CnrScreen(onImport: (String) -> Unit, onBackToConnect: () -> Unit) {
                 }
             }
             Button(modifier = Modifier.fillMaxWidth(), onClick = onBackToConnect) {
-                Text("بازگشت به صفحهٔ اتصال / قطع اتصال")
+                Text("بازگشت")
             }
         }
     }
