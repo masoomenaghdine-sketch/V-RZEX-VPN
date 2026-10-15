@@ -183,8 +183,17 @@ private fun NetworkLabScreen(
                                 Text(resolver.description, style = MaterialTheme.typography.bodySmall)
                                 Text(
                                     text = when (resolver.successful) {
-                                        true -> stringResource(R.string.dns_result_success, resolver.latencyMs ?: 0L)
-                                        false -> stringResource(R.string.dns_result_unstable)
+                                        true -> stringResource(
+                                            R.string.dns_result_success,
+                                            resolver.latencyMs ?: 0L,
+                                            resolver.successfulSamples,
+                                            resolver.jitterMs ?: 0L,
+                                        )
+                                        false -> stringResource(
+                                            R.string.dns_result_partial,
+                                            resolver.successfulSamples,
+                                            3,
+                                        )
                                         null -> stringResource(R.string.dns_result_not_tested)
                                     },
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
