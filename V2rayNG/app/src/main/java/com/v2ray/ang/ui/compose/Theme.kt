@@ -127,7 +127,7 @@ object ThemeManager {
     val themeMode: StateFlow<String> = _themeMode.asStateFlow()
 
     private val _dynamicColorEnabled = MutableStateFlow(
-        MmkvManager.decodeSettingsBool(AppConfig.PREF_DYNAMIC_COLOR, true)
+        MmkvManager.decodeSettingsBool(AppConfig.PREF_DYNAMIC_COLOR, false)
     )
     val dynamicColorEnabled: StateFlow<Boolean> = _dynamicColorEnabled.asStateFlow()
 
