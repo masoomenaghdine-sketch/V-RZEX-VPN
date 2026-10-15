@@ -97,16 +97,14 @@
                 <data android:mimeType="application/octet-stream" />
                 <data android:mimeType="application/json" />
             </intent-filter>
-            <!-- Some document providers do not report a useful MIME type for .VXV/.VZV. -->
+            <!-- Match extension-specific content URIs when a provider reports an unknown MIME type. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="content" />
-                <data android:scheme="file" />
-                <data android:pathPattern=".*\\.VXV" />
-                <data android:pathPattern=".*\\.vxv" />
-                <data android:pathPattern=".*\\.VZV" />
-                <data android:pathPattern=".*\\.vzv" />
+                <data android:scheme="content" android:host="*" android:pathPattern=".*\\.VXV" />
+                <data android:scheme="content" android:host="*" android:pathPattern=".*\\.vxv" />
+                <data android:scheme="content" android:host="*" android:pathPattern=".*\\.VZV" />
+                <data android:scheme="content" android:host="*" android:pathPattern=".*\\.vzv" />
             </intent-filter>
 
             <meta-data
