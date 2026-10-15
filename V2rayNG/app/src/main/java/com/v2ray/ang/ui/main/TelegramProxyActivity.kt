@@ -1,8 +1,11 @@
 package com.v2ray.ang.ui.main
 
 import android.content.ActivityNotFoundException
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -34,7 +37,6 @@ import kotlinx.coroutines.launch
 class TelegramProxyActivity : BaseComponentActivity() {
     private var proxies by mutableStateOf<List<String>>(emptyList())
     private var loading by mutableStateOf(false)
-    private var status by mutableStateOf("")
     private var lastRefresh by mutableStateOf(0L)
 
     override fun onStart() {
@@ -44,8 +46,6 @@ class TelegramProxyActivity : BaseComponentActivity() {
         lastRefresh = TelegramProxyRefreshWorker.lastRefreshMillis(this)
         if (proxies.isEmpty() || System.currentTimeMillis() - lastRefresh >= REFRESH_INTERVAL_MS) {
             refreshProxies()
-        } else {
-            status = "${proxies.size} پروکسی"
         }
     }
 
@@ -62,9 +62,6 @@ class TelegramProxyActivity : BaseComponentActivity() {
                         if (loading) CircularProgressIndicator()
                         else Text("تازه‌سازی")
                     }
-                }
-                if (status.isNotBlank()) {
-                    Text(status, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -83,7 +80,7 @@ class TelegramProxyActivity : BaseComponentActivity() {
                                     Text(server.ifBlank { "MTProto" }, style = MaterialTheme.typography.bodyMedium)
                                     Text(port, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
-                                Button(onClick = { openProxy(proxy) }) { Text("اتصال") }
+                                Button(onClick = { openProxy(proxy) }) { Text("تلگرام") }
                             }
                         }
                     }
@@ -103,17 +100,24 @@ class TelegramProxyActivity : BaseComponentActivity() {
     private fun refreshProxies() {
         if (loading) return
         loading = true
-        status = "در حال دریافت…"
         lifecycleScope.launch {
             val result = runCatching { TelegramProxyRefreshWorker.refreshNow(this@TelegramProxyActivity) }
             loading = false
             result.onSuccess { found ->
-                proxies = (found + TelegramProxyRefreshWorker.cachedProxies(this@TelegramProxyActivity)).distinct()
+                proxies = (found + TelegramProxyRefreshWorker.cachedProxies(this@TelegramProxyActivity))
+                    .filter(TelegramProxyFeed::isValidProxyLink)
+                    .distinct()
                 lastRefresh = TelegramProxyRefreshWorker.lastRefreshMillis(this@TelegramProxyActivity)
-                status = if (proxies.isEmpty()) "پروکسی در دسترس نیست" else "${proxies.size} پروکسی"
+                if (proxies.isEmpty()) {
+                    Toast.makeText(this@TelegramProxyActivity, "پروکسی پیدا نشد", Toast.LENGTH_SHORT).show()
+                }
             }.onFailure {
                 proxies = TelegramProxyRefreshWorker.cachedProxies(this@TelegramProxyActivity)
-                status = if (proxies.isEmpty()) "خطا در دریافت" else "${proxies.size} پروکسی ذخیره‌شده"
+                Toast.makeText(
+                    this@TelegramProxyActivity,
+                    if (proxies.isEmpty()) "خطا در دریافت پروکسی" else "پروکسی ذخیره‌شده نمایش داده شد",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }
     }
@@ -127,15 +131,21 @@ class TelegramProxyActivity : BaseComponentActivity() {
             Uri.Builder().scheme("tg").authority("proxy").encodedQuery(original.encodedQuery).build()
         } else original
 
-        try {
-            startActivity(Intent(Intent.ACTION_VIEW, telegramUri))
-        } catch (_: ActivityNotFoundException) {
+        val candidates = listOf(telegramUri, original).distinct()
+        for (candidate in candidates) {
             try {
-                startActivity(Intent(Intent.ACTION_VIEW, original))
+                startActivity(Intent(Intent.ACTION_VIEW, candidate))
+                return
             } catch (_: ActivityNotFoundException) {
-                status = "تلگرام در دسترس نیست"
+                // Try the universal link, then offer a copy fallback.
+            } catch (_: SecurityException) {
+                // Try the next compatible link.
             }
         }
+
+        val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("MTProto", original.toString()))
+        Toast.makeText(this, "لینک پروکسی کپی شد", Toast.LENGTH_SHORT).show()
     }
 
     companion object {
