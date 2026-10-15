@@ -37,4 +37,11 @@ class TelegramProxyFeedTest {
 
         assertTrue(TelegramProxyFeed.parseProxyLinks(body).isEmpty())
     }
+    @Test
+    fun normalizesTrailingDotInPublicProxyHostnames() {
+        val link = "https://t.me/proxy?server=proxy.example.com.&port=443&secret=dd10400103324995"
+        val parsed = TelegramProxyFeed.parseProxyLinks(link)
+        assertEquals(listOf("https://t.me/proxy?server=proxy.example.com&port=443&secret=dd10400103324995"), parsed)
+    }
+
 }
