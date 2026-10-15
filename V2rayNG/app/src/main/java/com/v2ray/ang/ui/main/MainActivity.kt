@@ -524,7 +524,7 @@ class MainActivity : HelperBaseComponentActivity() {
                     }
                     com.v2ray.ang.util.VorzexConfigExchange.isNpvExtension(displayName) -> {
                         // NPV/NPVS are proprietary formats. Never silently reinterpret them as Xray text.
-                        toastError(R.string.toast_failure)
+                        toastError(R.string.npv_import_not_supported)
                         LogUtil.w(AppConfig.TAG, "NPV/NPVS import needs a verified format-specific decoder")
                     }
                     else -> mainViewModel.onAction(MainAction.ImportBatchConfig(content))
