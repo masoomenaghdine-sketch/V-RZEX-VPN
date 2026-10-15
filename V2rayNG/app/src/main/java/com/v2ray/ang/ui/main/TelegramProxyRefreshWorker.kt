@@ -118,7 +118,7 @@ internal object TelegramProxyFeed {
         return PROXY_LINK.findAll(normalized)
             .map { it.value.trimEnd('.', ',', ')', ']', ';') }
             .map { link ->
-                Regex("(?i)([?&]server=[^&]+)\\\\.(?=&)").replace(link, "$1")
+                Regex("""(?i)([?&]server=[^&]+)\.(?=&)""").replace(link, "$1")
             }
             .filter(::isValidProxyLink)
             .distinct()
