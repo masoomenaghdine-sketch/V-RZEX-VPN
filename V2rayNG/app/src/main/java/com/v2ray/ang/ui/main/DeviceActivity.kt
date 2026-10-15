@@ -60,7 +60,7 @@ private fun DeviceScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text("دستگاه", style = MaterialTheme.typography.headlineSmall, color = Color(0xFF70F0FF))
-            DeviceInfoCard("دستگاه", deviceName)
+            DeviceInfoCard("مدل", deviceName)
             DeviceInfoCard("اندروید", androidVersion)
             DeviceInfoCard("نسخهٔ برنامه", appVersion)
             DeviceInfoCard("شناسه", deviceCode)
