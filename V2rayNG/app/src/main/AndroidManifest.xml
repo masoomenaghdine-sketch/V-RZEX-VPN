@@ -101,10 +101,10 @@
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="content" android:host="*" android:pathPattern=".*\\.VXV" />
-                <data android:scheme="content" android:host="*" android:pathPattern=".*\\.vxv" />
-                <data android:scheme="content" android:host="*" android:pathPattern=".*\\.VZV" />
-                <data android:scheme="content" android:host="*" android:pathPattern=".*\\.vzv" />
+                <data android:scheme="content" android:host="*" android:mimeType="*/*" android:pathPattern=".*\\.VXV" />
+                <data android:scheme="content" android:host="*" android:mimeType="*/*" android:pathPattern=".*\\.vxv" />
+                <data android:scheme="content" android:host="*" android:mimeType="*/*" android:pathPattern=".*\\.VZV" />
+                <data android:scheme="content" android:host="*" android:mimeType="*/*" android:pathPattern=".*\\.vzv" />
             </intent-filter>
 
             <meta-data
