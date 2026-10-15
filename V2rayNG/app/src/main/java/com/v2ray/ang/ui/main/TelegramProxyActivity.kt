@@ -80,7 +80,7 @@ class TelegramProxyActivity : BaseComponentActivity() {
                                     Text(server.ifBlank { "MTProto" }, style = MaterialTheme.typography.bodyMedium)
                                     Text(port, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
-                                Button(onClick = { openProxy(proxy) }) { Text("تلگرام") }
+                                Button(onClick = { openProxy(proxy) }) { Text("افزودن") }
                             }
                         }
                     }
