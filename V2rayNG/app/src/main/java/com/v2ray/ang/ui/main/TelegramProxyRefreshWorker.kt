@@ -14,6 +14,8 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
+import java.net.InetSocketAddress
+import java.net.Socket
 import java.net.URI
 import java.net.URL
 import java.net.URLDecoder
@@ -25,10 +27,13 @@ class TelegramProxyRefreshWorker(
     params: WorkerParameters
 ) : CoroutineWorker(appContext, params) {
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
-        runCatching { TelegramProxyFeed.fetch() }.fold(
-            onSuccess = { proxies ->
-                if (proxies.isNotEmpty()) saveProxies(applicationContext, proxies)
-                if (proxies.isNotEmpty()) Result.success() else Result.retry()
+        runCatching {
+            val fetched = TelegramProxyFeed.fetch()
+            TelegramProxyFeed.checkReachable(fetched).keys.toList()
+        }.fold(
+            onSuccess = { active ->
+                saveProxies(applicationContext, active)
+                if (active.isNotEmpty()) Result.success() else Result.retry()
             },
             onFailure = { Result.retry() }
         )
@@ -79,9 +84,10 @@ class TelegramProxyRefreshWorker(
                 .getLong(KEY_LAST_REFRESH, 0L)
 
         suspend fun refreshNow(context: Context): List<String> = withContext(Dispatchers.IO) {
-            val fresh = TelegramProxyFeed.fetch()
-            if (fresh.isNotEmpty()) saveProxies(context.applicationContext, fresh)
-            fresh
+            val fetched = TelegramProxyFeed.fetch()
+            val active = TelegramProxyFeed.checkReachable(fetched).keys.toList()
+            saveProxies(context.applicationContext, active)
+            active
         }
     }
 }
@@ -105,7 +111,6 @@ internal object TelegramProxyFeed {
             }.awaitAll().flatten().distinct().take(150)
         }
 
-        // Try independent mirrors in parallel so one blocked host does not leave the screen empty.
         val repositoryFeeds = fetchSources(
             listOf(
                 PROXY_FEED_URL,
@@ -117,6 +122,54 @@ internal object TelegramProxyFeed {
         if (repositoryFeeds.isNotEmpty()) return@withContext repositoryFeeds
 
         fetchSources(listOf("https://t.me/s/PeopleProxy", "https://t.me/s/iRoProxy"))
+    }
+
+    /**
+     * Checks TCP reachability from the device's current network and orders reachable proxies
+     * by measured connection time. A successful TCP handshake is not a guarantee that Telegram
+     * will accept the MTProto secret, so the UI reports reachability rather than protocol success.
+     */
+    suspend fun checkReachable(proxies: List<String>): Map<String, Long> = withContext(Dispatchers.IO) {
+        val results = mutableListOf<Pair<String, Long>>()
+        proxies.distinct().take(100).chunked(20).forEach { batch ->
+            val checked = coroutineScope {
+                batch.map { proxy ->
+                    async(Dispatchers.IO) {
+                        runCatching { probeTcp(proxy)?.let { proxy to it } }.getOrNull()
+                    }
+                }.awaitAll().filterNotNull()
+            }
+            results += checked
+        }
+        results.sortedBy { it.second }.toMap(LinkedHashMap())
+    }
+
+    private fun probeTcp(proxy: String): Long? {
+        val uri = URI(proxy)
+        val params = (uri.rawQuery ?: return null).split("&").mapNotNull { part ->
+            val separator = part.indexOf('=')
+            if (separator <= 0) null else {
+                val key = URLDecoder.decode(part.substring(0, separator), StandardCharsets.UTF_8.name())
+                val value = URLDecoder.decode(
+                    part.substring(separator + 1).replace("+", "%2B"),
+                    StandardCharsets.UTF_8.name()
+                )
+                key to value
+            }
+        }.toMap()
+        val server = params["server"].orEmpty().removeSuffix(".")
+        val port = params["port"]?.toIntOrNull() ?: return null
+        if (server.isBlank() || port !in 1..65535) return null
+
+        val start = System.nanoTime()
+        return try {
+            Socket().use { socket ->
+                socket.connect(InetSocketAddress(server, port), 1_800)
+            }
+            ((System.nanoTime() - start) / 1_000_000L).coerceAtLeast(1L)
+        } catch (_: Exception) {
+            null
+        }
     }
 
     internal fun parseProxyLinks(body: String): List<String> {
