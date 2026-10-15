@@ -216,6 +216,8 @@ dependencies {
     // Testing Libraries
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
+    // Use a real JVM JSON implementation in local unit tests; android.jar JSON methods are stubs.
+    testImplementation("org.json:json:20240303")
     testRuntimeOnly(libs.junit.platform.launcher)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
