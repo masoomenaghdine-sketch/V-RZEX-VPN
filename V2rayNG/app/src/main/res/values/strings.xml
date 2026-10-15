@@ -117,6 +117,7 @@
     <string name="server_lab_kcp_tti">mKCP TTI (optional, default 50 ms)</string>
     <string name="toast_success">Success</string>
     <string name="toast_failure">Failure</string>
+    <string name="npv_import_not_supported">NPV/NPVS import is not supported yet: a verified decoder is required.</string>
     <string name="toast_none_data">No data available</string>
     <string name="toast_incorrect_protocol">Incorrect protocol</string>
     <string name="toast_decoding_failed">Decoding failed</string>
