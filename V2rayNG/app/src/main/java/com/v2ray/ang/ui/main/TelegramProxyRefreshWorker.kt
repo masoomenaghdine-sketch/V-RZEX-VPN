@@ -89,6 +89,8 @@ class TelegramProxyRefreshWorker(
 internal object TelegramProxyFeed {
     private const val PROXY_FEED_URL =
         "https://raw.githubusercontent.com/SoliSpirit/mtproto/master/all_proxies.txt"
+    private const val PROXY_FEED_CDN_URL =
+        "https://cdn.jsdelivr.net/gh/SoliSpirit/mtproto@master/all_proxies.txt"
     private val PROXY_LINK = Regex(
         """(?:tg://proxy\?[^"'<>\s]+|https?://t\.me/proxy\?[^"'<>\s]+)""",
         RegexOption.IGNORE_CASE
@@ -97,6 +99,7 @@ internal object TelegramProxyFeed {
     suspend fun fetch(): List<String> = withContext(Dispatchers.IO) {
         val sources = listOf(
             PROXY_FEED_URL,
+            PROXY_FEED_CDN_URL,
             "https://t.me/s/PeopleProxy",
             "https://t.me/s/iRoProxy"
         )
@@ -158,11 +161,13 @@ internal object TelegramProxyFeed {
 
     private fun readSource(source: String): List<String> {
         val connection = URL(source).openConnection() as HttpURLConnection
-        connection.connectTimeout = 10_000
-        connection.readTimeout = 12_000
+        connection.connectTimeout = 8_000
+        connection.readTimeout = 10_000
         connection.instanceFollowRedirects = true
-        connection.setRequestProperty("User-Agent", "Mozilla/5.0 VORZEX-PT")
+        connection.useCaches = false
+        connection.setRequestProperty("User-Agent", "Mozilla/5.0 VORZEX")
         connection.setRequestProperty("Accept", "text/plain,text/html,*/*")
+        connection.setRequestProperty("Accept-Encoding", "gzip")
         return try {
             val code = connection.responseCode
             if (code !in 200..299) return emptyList()
