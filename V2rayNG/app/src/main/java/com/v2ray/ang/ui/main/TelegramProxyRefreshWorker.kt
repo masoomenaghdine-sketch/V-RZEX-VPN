@@ -97,19 +97,18 @@ internal object TelegramProxyFeed {
     )
 
     suspend fun fetch(): List<String> = withContext(Dispatchers.IO) {
-        val sources = listOf(
-            PROXY_FEED_URL,
-            PROXY_FEED_CDN_URL,
-            "https://t.me/s/PeopleProxy",
-            "https://t.me/s/iRoProxy"
-        )
-        coroutineScope {
+        suspend fun fetchSources(sources: List<String>): List<String> = coroutineScope {
             sources.map { source ->
                 async(Dispatchers.IO) {
                     runCatching { readSource(source) }.getOrDefault(emptyList())
                 }
             }.awaitAll().flatten().distinct().take(150)
         }
+
+        val repositoryFeeds = fetchSources(listOf(PROXY_FEED_URL, PROXY_FEED_CDN_URL))
+        if (repositoryFeeds.isNotEmpty()) return@withContext repositoryFeeds
+
+        fetchSources(listOf("https://t.me/s/PeopleProxy", "https://t.me/s/iRoProxy"))
     }
 
     internal fun parseProxyLinks(body: String): List<String> {
