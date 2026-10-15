@@ -28,6 +28,8 @@ data class DnsResolverResult(
     val testUrl: String,
     val latencyMs: Long? = null,
     val successful: Boolean? = null,
+    val successfulSamples: Int = 0,
+    val jitterMs: Long? = null,
 )
 
 data class NetworkLabState(
@@ -81,6 +83,9 @@ class NetworkLabViewModel : ViewModel() {
                             resolver.copy(
                                 latencyMs = samples.sorted().getOrNull(samples.size / 2),
                                 successful = samples.size == attempts,
+                                successfulSamples = samples.size,
+                                jitterMs = samples.zipWithNext { first, second -> abs(first - second) }
+                                    .takeIf { it.isNotEmpty() }?.average()?.toLong(),
                             )
                         }
                     }.awaitAll()
