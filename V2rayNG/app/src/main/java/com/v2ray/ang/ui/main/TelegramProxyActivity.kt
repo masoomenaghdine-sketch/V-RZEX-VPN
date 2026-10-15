@@ -73,7 +73,7 @@ class TelegramProxyActivity : BaseComponentActivity() {
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier.size(48.dp).clip(RoundedCornerShape(17.dp))
-                            .background(Brush.linearGradient(listOf(Color(0xFF8B5CF6), Color(0xFF22D3EE))),
+                            .background(Brush.linearGradient(listOf(Color(0xFF8B5CF6), Color(0xFF22D3EE)))),
                         contentAlignment = Alignment.Center
                     ) {
                         Text("PT", color = Color.White, fontWeight = FontWeight.Black, fontSize = 17.sp)
@@ -257,6 +257,7 @@ class TelegramProxyActivity : BaseComponentActivity() {
             result.onSuccess { active ->
                 proxies = active.filter(TelegramProxyFeed::isValidProxyLink).distinct()
                 latencyByProxy = TelegramProxyFeed.checkReachable(proxies)
+                proxies = latencyByProxy.keys.toList()
                 lastRefresh = TelegramProxyRefreshWorker.lastRefreshMillis(this@TelegramProxyActivity)
                 if (proxies.isEmpty()) Toast.makeText(this@TelegramProxyActivity, "پروکسی پاسخ‌گو پیدا نشد", Toast.LENGTH_SHORT).show()
             }.onFailure {
