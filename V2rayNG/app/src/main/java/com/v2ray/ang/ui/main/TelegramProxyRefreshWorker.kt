@@ -131,7 +131,7 @@ internal object TelegramProxyFeed {
             val port = params["port"]?.toIntOrNull() ?: return false
             val secret = params["secret"].orEmpty()
             server.isNotBlank() && port in 1..65535 &&
-                secret.length in 8..256 && secret.matches(Regex("[A-Za-z0-9_-]+"))
+                secret.length in 8..256 && secret.matches(Regex("[A-Za-z0-9_+=/-]+"))
         } catch (_: Exception) {
             false
         }
