@@ -41,7 +41,7 @@ class TelegramProxyActivity : BaseComponentActivity() {
         if (proxies.isEmpty() || System.currentTimeMillis() - lastRefresh >= REFRESH_INTERVAL_MS) {
             refreshProxies()
         } else {
-            status = "آخرین به‌روزرسانی: ${formatAge(lastRefresh)}؛ بررسی پس‌زمینه هر ۲ ساعت زمان‌بندی شده است."
+            status = "به‌روزرسانی: ${formatAge(lastRefresh)}"
         }
     }
 
@@ -53,25 +53,16 @@ class TelegramProxyActivity : BaseComponentActivity() {
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text("PT · Telegram Proxy", style = MaterialTheme.typography.headlineSmall)
-                Text(
-                    "پروکسی‌های MTProto فقط برای تلگرام هستند و اتصال VPN کل دستگاه را فعال نمی‌کنند.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
                 Button(onClick = { refreshProxies() }, enabled = !loading, modifier = Modifier.fillMaxWidth()) {
                     if (loading) CircularProgressIndicator()
                     else Text("به‌روزرسانی پروکسی‌ها")
                 }
                 if (status.isNotBlank()) Text(status, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(
-                    "فهرست عمومی به‌طور دوره‌ای دریافت می‌شود. به‌روزرسانی هر ۲ ساعت توسط Android زمان‌بندی می‌شود و ممکن است به‌دلیل محدودیت‌های باتری/شبکه کمی دیرتر اجرا شود. فعال‌بودن و قابل‌اعتمادبودن هر پروکسی تضمین‌شده نیست.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f)) {
                     items(proxies, key = { it }) { proxy ->
                         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                             Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
-                                Text(proxy.take(100), style = MaterialTheme.typography.bodySmall)
+                                Text(Uri.parse(proxy).getQueryParameter("server") ?: "Telegram Proxy", style = MaterialTheme.typography.bodyMedium)
                                 Button(onClick = { openUrl(proxy) }, modifier = Modifier.fillMaxWidth()) {
                                     Text("بازکردن در تلگرام")
                                 }
@@ -96,16 +87,16 @@ class TelegramProxyActivity : BaseComponentActivity() {
                 proxies = found.ifEmpty { TelegramProxyRefreshWorker.cachedProxies(this@TelegramProxyActivity) }
                 lastRefresh = TelegramProxyRefreshWorker.lastRefreshMillis(this@TelegramProxyActivity)
                 status = if (proxies.isEmpty()) {
-                    "پروکسی‌ای دریافت نشد؛ اتصال اینترنت یا منبع فهرست را بررسی کن."
+                    "پروکسی پیدا نشد"
                 } else {
-                    "${proxies.size} لینک پیدا شد؛ آخرین دریافت: ${formatAge(lastRefresh)}. فعال‌بودن لینک‌ها جداگانه تضمین نشده است."
+                    "${proxies.size} پروکسی"
                 }
             }.onFailure {
                 proxies = TelegramProxyRefreshWorker.cachedProxies(this@TelegramProxyActivity)
                 status = if (proxies.isEmpty()) {
-                    "دریافت ناموفق بود؛ بعداً دوباره تلاش کن."
+                    "دریافت ناموفق"
                 } else {
-                    "به‌روزرسانی ناموفق بود؛ فهرست ذخیره‌شده نمایش داده می‌شود."
+                    "فهرست ذخیره‌شده"
                 }
             }
         }
