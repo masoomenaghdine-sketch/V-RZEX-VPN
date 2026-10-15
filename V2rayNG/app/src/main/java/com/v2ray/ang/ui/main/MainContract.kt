@@ -57,6 +57,8 @@ sealed interface MainAction {
     data object SortByTestResults : MainAction
     data object UpdateSubscriptions : MainAction
     data object ExportAll : MainAction
+    data object ExportVZV : MainAction
+    data object ShareVZV : MainAction
 
     data object ImportQRcode : MainAction
     data object ImportClipboard : MainAction
