@@ -78,7 +78,7 @@ class TelegramProxyActivity : BaseComponentActivity() {
                                     Text(server.ifBlank { "MTProto" }, style = MaterialTheme.typography.bodyMedium)
                                     Text(port, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
-                                Button(onClick = { openProxy(proxy) }) { Text("افزودن") }
+                                Button(onClick = { openProxy(proxy) }) { Text("تلگرام") }
                             }
                         }
                     }
@@ -121,23 +121,30 @@ class TelegramProxyActivity : BaseComponentActivity() {
 
     private fun openProxy(value: String) {
         val original = Uri.parse(value)
-        val telegramUri = if (original.scheme.equals("https", ignoreCase = true) &&
+        val telegramUri = if (
+            original.scheme.equals("https", ignoreCase = true) &&
             original.host.equals("t.me", ignoreCase = true) &&
             original.path.equals("/proxy", ignoreCase = true)
         ) {
-            Uri.Builder().scheme("tg").authority("proxy").encodedQuery(original.encodedQuery).build()
-        } else original
+            Uri.Builder()
+                .scheme("tg")
+                .authority("proxy")
+                .encodedQuery(original.encodedQuery)
+                .build()
+        } else {
+            original
+        }
 
-        val candidates = listOf(telegramUri, original).distinct()
-        for (candidate in candidates) {
-            try {
-                startActivity(Intent(Intent.ACTION_VIEW, candidate))
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, telegramUri)
+            if (intent.resolveActivity(packageManager) != null) {
+                startActivity(intent)
                 return
-            } catch (_: ActivityNotFoundException) {
-                // Try the universal link, then offer a copy fallback.
-            } catch (_: SecurityException) {
-                // Try the next compatible link.
             }
+        } catch (_: ActivityNotFoundException) {
+            // Telegram is not available as a link handler on this device.
+        } catch (_: SecurityException) {
+            // Fall back to copying the original universal link.
         }
 
         val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
