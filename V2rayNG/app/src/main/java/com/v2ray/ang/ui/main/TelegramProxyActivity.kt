@@ -255,9 +255,8 @@ class TelegramProxyActivity : BaseComponentActivity() {
             val result = runCatching { TelegramProxyRefreshWorker.refreshNow(this@TelegramProxyActivity) }
             loading = false
             result.onSuccess { active ->
-                proxies = active.filter(TelegramProxyFeed::isValidProxyLink).distinct()
-                latencyByProxy = TelegramProxyFeed.checkReachable(proxies)
-                proxies = latencyByProxy.keys.toList()
+                latencyByProxy = active
+                proxies = active.keys.filter(TelegramProxyFeed::isValidProxyLink).distinct()
                 lastRefresh = TelegramProxyRefreshWorker.lastRefreshMillis(this@TelegramProxyActivity)
                 if (proxies.isEmpty()) Toast.makeText(this@TelegramProxyActivity, "پروکسی پاسخ‌گو پیدا نشد", Toast.LENGTH_SHORT).show()
             }.onFailure {
