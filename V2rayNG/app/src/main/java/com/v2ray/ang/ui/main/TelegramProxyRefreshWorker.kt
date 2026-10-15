@@ -1,7 +1,6 @@
 package com.v2ray.ang.ui.main
 
 import android.content.Context
-import android.net.Uri
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -15,6 +14,9 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import java.net.URL
+import java.net.URI
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 import java.net.URLConnection
 import java.util.concurrent.TimeUnit
 
@@ -115,14 +117,25 @@ internal object TelegramProxyFeed {
             .toList()
     }
 
-    private fun isValidProxyLink(value: String): Boolean = runCatching {
-        val uri = Uri.parse(value)
-        val server = uri.getQueryParameter("server").orEmpty()
-        val port = uri.getQueryParameter("port")?.toIntOrNull() ?: return false
-        val secret = uri.getQueryParameter("secret").orEmpty()
-        server.isNotBlank() && port in 1..65535 &&
-            secret.length in 8..256 && secret.matches(Regex("[A-Za-z0-9_-]+"))
-    }.getOrDefault(false)
+    private fun isValidProxyLink(value: String): Boolean {
+        return try {
+            val query = URI(value).rawQuery ?: return false
+            val params = query.split("&").mapNotNull { part ->
+                val separator = part.indexOf('=')
+                if (separator <= 0) null else {
+                    URLDecoder.decode(part.substring(0, separator), StandardCharsets.UTF_8.name()) to
+                        URLDecoder.decode(part.substring(separator + 1), StandardCharsets.UTF_8.name())
+                }
+            }.toMap()
+            val server = params["server"].orEmpty()
+            val port = params["port"]?.toIntOrNull() ?: return false
+            val secret = params["secret"].orEmpty()
+            server.isNotBlank() && port in 1..65535 &&
+                secret.length in 8..256 && secret.matches(Regex("[A-Za-z0-9_-]+"))
+        } catch (_: Exception) {
+            false
+        }
+    }
 
     private fun readSource(source: String): List<String> {
         val connection: URLConnection = URL(source).openConnection()
