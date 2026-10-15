@@ -91,17 +91,30 @@ class NetworkLabViewModel : ViewModel() {
             var selectedDns = _state.value.selectedDns
             var error: String? = null
             if (autoApplyBest) {
-                val best = results.firstOrNull {
+                // Prefer two independently reachable DoH resolvers so the core can
+                // fall back if the primary resolver becomes unavailable. Only tested HTTPS
+                // DoH endpoints are eligible; never replace a working setting with an untested list.
+                val working = results.filter {
                     it.successful == true && it.latencyMs != null &&
                         it.coreAddress.startsWith("https://", ignoreCase = true)
                 }
-                if (best == null) {
+                val primary = working.firstOrNull()
+                val secondary = working.firstOrNull { candidate ->
+                    primary != null && runCatching {
+                        Uri.parse(candidate.coreAddress).host != Uri.parse(primary.coreAddress).host
+                    }.getOrDefault(false)
+                }
+                if (primary == null) {
                     error = "no_dns"
-                } else if (MmkvManager.encodeSettings(AppConfig.PREF_REMOTE_DNS, best.coreAddress)) {
-                    SettingsChangeManager.notifySettingChanged(AppConfig.PREF_REMOTE_DNS)
-                    selectedDns = best.coreAddress
                 } else {
-                    error = "save_error"
+                    val orderedResolvers = listOfNotNull(primary, secondary)
+                    val dnsChain = orderedResolvers.joinToString(",") { it.coreAddress }
+                    if (MmkvManager.encodeSettings(AppConfig.PREF_REMOTE_DNS, dnsChain)) {
+                        SettingsChangeManager.notifySettingChanged(AppConfig.PREF_REMOTE_DNS)
+                        selectedDns = dnsChain
+                    } else {
+                        error = "save_error"
+                    }
                 }
             }
             _state.value = _state.value.copy(
