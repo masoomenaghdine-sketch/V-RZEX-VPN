@@ -166,8 +166,13 @@ class NetworkLabViewModel : ViewModel() {
                 gamingLossPercent = null,
                 error = null,
             )
+            // Alternate independent HTTPS endpoints. This measures connection response,
+            // not ICMP ping and not the DNS resolver latency measured above.
             val timings = withContext(Dispatchers.IO) {
-                (1..10).map { probeHttp(AppConfig.DELAY_TEST_URL, timeoutMs = 2500) }
+                (1..10).map { sample ->
+                    val endpoint = if (sample % 2 == 0) AppConfig.DELAY_TEST_URL2 else AppConfig.DELAY_TEST_URL
+                    probeHttp(endpoint, timeoutMs = 2500)
+                }
             }
             val good = timings.filterNotNull()
             val average = good.takeIf { it.isNotEmpty() }?.average()?.toLong()
