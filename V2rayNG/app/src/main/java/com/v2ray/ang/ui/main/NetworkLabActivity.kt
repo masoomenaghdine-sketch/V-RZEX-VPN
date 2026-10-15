@@ -78,11 +78,6 @@ private fun NetworkLabScreen(
                         text = stringResource(if (gamingTab) R.string.gaming_mode_title else R.string.dns_lab_title),
                         style = MaterialTheme.typography.headlineSmall,
                     )
-                    Text(
-                        text = stringResource(R.string.network_lab_subtitle),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
                 Button(onClick = onBack) { Text(stringResource(R.string.network_lab_back)) }
             }
@@ -93,7 +88,6 @@ private fun NetworkLabScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(stringResource(R.string.gaming_mode_title), style = MaterialTheme.typography.titleMedium)
-                                Text(stringResource(R.string.gaming_mode_description), style = MaterialTheme.typography.bodySmall)
                             }
                             Switch(checked = state.gamingEnabled, onCheckedChange = onGamingToggle)
                         }
@@ -135,15 +129,9 @@ private fun NetworkLabScreen(
                         state.gamingLossPercent?.let {
                             Text(stringResource(R.string.gaming_loss, it))
                         }
-                        Text(
-                            stringResource(R.string.gaming_measurement_note),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
                     }
                 }
             } else {
-                Text(stringResource(R.string.dns_lab_explanation), style = MaterialTheme.typography.bodyMedium)
                 Button(
                     onClick = onScanDns,
                     enabled = !state.isScanningDns,
@@ -167,7 +155,6 @@ private fun NetworkLabScreen(
                                 verticalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
                                 Text(resolver.name, style = MaterialTheme.typography.titleMedium)
-                                Text(resolver.description, style = MaterialTheme.typography.bodySmall)
                                 Text(
                                     text = when (resolver.successful) {
                                         true -> stringResource(R.string.dns_result_success, resolver.latencyMs ?: 0L)
