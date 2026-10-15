@@ -83,10 +83,10 @@ class TelegramProxyRefreshWorker(
             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                 .getLong(KEY_LAST_REFRESH, 0L)
 
-        suspend fun refreshNow(context: Context): List<String> = withContext(Dispatchers.IO) {
+        suspend fun refreshNow(context: Context): Map<String, Long> = withContext(Dispatchers.IO) {
             val fetched = TelegramProxyFeed.fetch()
-            val active = TelegramProxyFeed.checkReachable(fetched).keys.toList()
-            saveProxies(context.applicationContext, active)
+            val active = TelegramProxyFeed.checkReachable(fetched)
+            saveProxies(context.applicationContext, active.keys.toList())
             active
         }
     }
