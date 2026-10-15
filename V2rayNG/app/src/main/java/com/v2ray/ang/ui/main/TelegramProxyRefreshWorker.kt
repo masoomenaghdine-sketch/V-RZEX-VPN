@@ -105,7 +105,15 @@ internal object TelegramProxyFeed {
             }.awaitAll().flatten().distinct().take(150)
         }
 
-        val repositoryFeeds = fetchSources(listOf(PROXY_FEED_URL, PROXY_FEED_CDN_URL))
+        // Try independent mirrors in parallel so one blocked host does not leave the screen empty.
+        val repositoryFeeds = fetchSources(
+            listOf(
+                PROXY_FEED_URL,
+                PROXY_FEED_CDN_URL,
+                "https://raw.githubusercontent.com/Grim1313/mtproto-for-telegram/master/all_proxies.txt",
+                "https://cdn.jsdelivr.net/gh/Grim1313/mtproto-for-telegram@master/all_proxies.txt"
+            )
+        )
         if (repositoryFeeds.isNotEmpty()) return@withContext repositoryFeeds
 
         fetchSources(listOf("https://t.me/s/PeopleProxy", "https://t.me/s/iRoProxy"))
