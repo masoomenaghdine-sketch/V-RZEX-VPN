@@ -1,6 +1,7 @@
 package com.v2ray.ang.ui.main
 
 import android.content.Context
+import android.net.Uri
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -11,31 +12,22 @@ import androidx.work.WorkerParameters
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import java.net.URL
 import java.net.URLConnection
 import java.util.concurrent.TimeUnit
 
-/**
- * Refreshes the public Telegram MTProto feed in the background.
- * Public proxies are untrusted and cannot be guaranteed to stay online.
- */
 class TelegramProxyRefreshWorker(
     appContext: Context,
     params: WorkerParameters
 ) : CoroutineWorker(appContext, params) {
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
-        runCatching {
-            val proxies = TelegramProxyFeed.fetch()
-            if (proxies.isNotEmpty()) {
-                applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                    .edit()
-                    .putString(KEY_PROXY_LIST, proxies.joinToString("\n"))
-                    .putLong(KEY_LAST_REFRESH, System.currentTimeMillis())
-                    .apply()
-            }
-        }.fold(
-            onSuccess = { Result.success() },
+        runCatching { TelegramProxyFeed.fetch() }.fold(
+            onSuccess = { proxies ->
+                if (proxies.isNotEmpty()) saveProxies(applicationContext, proxies)
+                if (proxies.isNotEmpty()) Result.success() else Result.retry()
+            },
             onFailure = { Result.retry() }
         )
     }
@@ -46,6 +38,14 @@ class TelegramProxyRefreshWorker(
         private const val KEY_LAST_REFRESH = "last_refresh"
         private const val UNIQUE_WORK = "vorzex_telegram_proxy_refresh"
         private const val REFRESH_INTERVAL_HOURS = 2L
+
+        private fun saveProxies(context: Context, proxies: List<String>) {
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .edit()
+                .putString(KEY_PROXY_LIST, proxies.joinToString("\n"))
+                .putLong(KEY_LAST_REFRESH, System.currentTimeMillis())
+                .apply()
+        }
 
         fun schedule(context: Context) {
             val constraints = Constraints.Builder()
@@ -76,15 +76,9 @@ class TelegramProxyRefreshWorker(
                 .getLong(KEY_LAST_REFRESH, 0L)
 
         suspend fun refreshNow(context: Context): List<String> = withContext(Dispatchers.IO) {
-            val proxies = TelegramProxyFeed.fetch()
-            if (proxies.isNotEmpty()) {
-                context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                    .edit()
-                    .putString(KEY_PROXY_LIST, proxies.joinToString("\n"))
-                    .putLong(KEY_LAST_REFRESH, System.currentTimeMillis())
-                    .apply()
+            TelegramProxyFeed.fetch().also { proxies ->
+                if (proxies.isNotEmpty()) saveProxies(context.applicationContext, proxies)
             }
-            proxies
         }
     }
 }
@@ -93,7 +87,7 @@ internal object TelegramProxyFeed {
     private const val PROXY_FEED_URL =
         "https://raw.githubusercontent.com/SoliSpirit/mtproto/master/all_proxies.txt"
     private val PROXY_LINK = Regex(
-        """(?:tg://proxy\?[^"'<>\s]+|https?://t\.me/proxy\?[^"'<>\s]+)""",
+        """(?:tg://proxy\?[^"'<>\\s]+|https?://t\\.me/proxy\?[^"'<>\\s]+)""",
         RegexOption.IGNORE_CASE
     )
 
@@ -103,12 +97,32 @@ internal object TelegramProxyFeed {
             "https://t.me/s/PeopleProxy",
             "https://t.me/s/iRoProxy"
         )
-        sources.map { source ->
-            kotlinx.coroutines.coroutineScope {
-                async(Dispatchers.IO) { readSource(source) }
-            }
-        }.awaitAll().flatten().distinct().take(150)
+        coroutineScope {
+            sources.map { source ->
+                async(Dispatchers.IO) {
+                    runCatching { readSource(source) }.getOrDefault(emptyList())
+                }
+            }.awaitAll().flatten().distinct().take(150)
+        }
     }
+
+    internal fun parseProxyLinks(body: String): List<String> {
+        val normalized = body.replace("&amp;", "&").replace("&#38;", "&")
+        return PROXY_LINK.findAll(normalized)
+            .map { it.value.trimEnd('.', ',', ')', ']', ';') }
+            .filter(::isValidProxyLink)
+            .distinct()
+            .toList()
+    }
+
+    private fun isValidProxyLink(value: String): Boolean = runCatching {
+        val uri = Uri.parse(value)
+        val server = uri.getQueryParameter("server").orEmpty()
+        val port = uri.getQueryParameter("port")?.toIntOrNull() ?: return false
+        val secret = uri.getQueryParameter("secret").orEmpty()
+        server.isNotBlank() && port in 1..65535 &&
+            secret.length in 8..256 && secret.matches(Regex("[A-Za-z0-9_-]+"))
+    }.getOrDefault(false)
 
     private fun readSource(source: String): List<String> {
         val connection: URLConnection = URL(source).openConnection()
@@ -116,12 +130,6 @@ internal object TelegramProxyFeed {
         connection.readTimeout = 7000
         connection.setRequestProperty("User-Agent", "Mozilla/5.0 VORZEX-PT")
         val body = connection.getInputStream().bufferedReader(Charsets.UTF_8).use { it.readText() }
-            .replace("&amp;", "&")
-            .replace("&#38;", "&")
-        return PROXY_LINK.findAll(body)
-            .map { it.value.trimEnd('.', ',', ')', ']', ';') }
-            .filter { it.contains("server=") && it.contains("port=") && it.contains("secret=") }
-            .distinct()
-            .toList()
+        return parseProxyLinks(body)
     }
 }
