@@ -810,7 +810,7 @@
     <string name="network_endpoint_result">%1$s · میانه %2$d میلی‌ثانیه · %3$d از %4$d موفق</string>
     <string name="network_endpoint_failed">%1$s · در دسترس نیست</string>
     <string name="countries_title">کشورها · کانفیگ رایگان</string>
-    <string name="ai_dpi_shield_title">AI Shield · بررسی مقاومت شبکه</string>
+    <string name="ai_dpi_shield_title">AI NET · تحلیل هوشمند شبکه</string>
     <string name="ai_con_title">AI CON · ساخت و اتصال هوشمند</string>
     <string name="notification_action_ai_con">اجرای AI CON</string>
 </resources>
