@@ -477,6 +477,10 @@ class MainActivity : HelperBaseComponentActivity() {
             startActivity(Intent(this, CnrActivity::class.java))
             return
         }
+        if (destination == MainDestination.AiShield) {
+            startActivity(Intent(this, AiDpiShieldActivity::class.java))
+            return
+        }
         if (destination == MainDestination.TorNetwork) {
             // Open a Tor-only starter profile in the existing Aether editor. The existing
             // Tor/lyrebird engine is reused; existing VPN profiles and settings remain intact.
@@ -497,6 +501,7 @@ class MainActivity : HelperBaseComponentActivity() {
             MainDestination.TorNetwork -> error("Tor Network is handled before building the settings intent")
             MainDestination.TelegramProxy -> error("Telegram Proxy is handled before building the settings intent")
             MainDestination.Cnr -> error("CNR is handled before building the settings intent")
+            MainDestination.AiShield -> error("AI Shield is handled before building the settings intent")
             MainDestination.Device -> error("Device is handled before building the settings intent")
             MainDestination.Logcat -> Intent(this, LogcatActivity::class.java)
             MainDestination.CheckUpdate -> Intent(this, CheckUpdateActivity::class.java)
