@@ -124,9 +124,18 @@ class NetworkLabViewModel : ViewModel() {
     }
 
     fun applyDns(coreAddress: String) {
+        // Never replace a working resolver with an untested or failed endpoint. The list can
+        // contain community-sourced URLs, so require an HTTPS resolver with successful live samples.
         val resolver = _state.value.resolvers.firstOrNull {
-            it.coreAddress == coreAddress && it.coreAddress.startsWith("https://")
-        } ?: return
+            it.coreAddress == coreAddress &&
+                it.coreAddress.startsWith("https://", ignoreCase = true) &&
+                it.successful == true &&
+                it.latencyMs != null
+        }
+        if (resolver == null) {
+            _state.value = _state.value.copy(error = "dns_not_verified")
+            return
+        }
         val stored = MmkvManager.encodeSettings(AppConfig.PREF_REMOTE_DNS, resolver.coreAddress)
         if (!stored) {
             _state.value = _state.value.copy(error = "save_error")
