@@ -477,6 +477,10 @@ class MainActivity : HelperBaseComponentActivity() {
             startActivity(Intent(this, CnrActivity::class.java))
             return
         }
+        if (destination == MainDestination.Countries) {
+            startActivity(Intent(this, CountriesActivity::class.java))
+            return
+        }
         if (destination == MainDestination.AiCon) {
             mainViewModel.onAction(MainAction.GenerateAiConfig)
             return
@@ -505,6 +509,7 @@ class MainActivity : HelperBaseComponentActivity() {
             MainDestination.TorNetwork -> error("Tor Network is handled before building the settings intent")
             MainDestination.TelegramProxy -> error("Telegram Proxy is handled before building the settings intent")
             MainDestination.Cnr -> error("CNR is handled before building the settings intent")
+            MainDestination.Countries -> error("Countries is handled before building the settings intent")
             MainDestination.AiCon -> error("AI_CON is handled before building the settings intent")
             MainDestination.AiShield -> error("AI Shield is handled before building the settings intent")
             MainDestination.Device -> error("Device is handled before building the settings intent")
