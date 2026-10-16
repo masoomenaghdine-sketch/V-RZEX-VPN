@@ -11,6 +11,8 @@ import android.view.KeyEvent
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
 import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -250,7 +252,47 @@ class MainActivity : HelperBaseComponentActivity() {
             }
             else -> null
         }
-        if (uri != null) {
+        if (uri?.scheme.equals("v2rayng", ignoreCase = true) && uri?.host == "install-config") {
+            val remoteUrl = uri.getQueryParameter("url")
+            if (remoteUrl.isNullOrBlank()) {
+                toastError(R.string.toast_failure)
+                return
+            }
+            lifecycleScope.launch {
+                try {
+                    val configText = withContext(Dispatchers.IO) {
+                        val parsedUrl = URL(remoteUrl)
+                        require(parsedUrl.protocol.equals("https", ignoreCase = true)) {
+                            "Only HTTPS configuration sources are accepted"
+                        }
+                        require(parsedUrl.host.equals("raw.githubusercontent.com", ignoreCase = true)) {
+                            "Configuration source host is not allowed"
+                        }
+                        val connection = parsedUrl.openConnection() as HttpURLConnection
+                        try {
+                            connection.connectTimeout = 8_000
+                            connection.readTimeout = 12_000
+                            connection.instanceFollowRedirects = false
+                            require(connection.responseCode in 200..299) {
+                                "Configuration source returned HTTP ${connection.responseCode}"
+                            }
+                            require(connection.contentLengthLong <= 2L * 1024L * 1024L) {
+                                "Configuration source is too large"
+                            }
+                            connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+                                .also { require(it.isNotBlank() && it.length <= 2 * 1024 * 1024) { "Configuration source is empty or too large" } }
+                        } finally {
+                            connection.disconnect()
+                        }
+                    }
+                    mainViewModel.onAction(MainAction.ImportBatchConfig(configText))
+                    toastSuccess(R.string.toast_success)
+                } catch (e: Exception) {
+                    LogUtil.e(AppConfig.TAG, "Failed to import remote public configuration", e)
+                    toastError(R.string.toast_failure)
+                }
+            }
+        } else if (uri != null) {
             lifecycleScope.launch {
                 delay(350)
                 importExchangeUri(uri)
