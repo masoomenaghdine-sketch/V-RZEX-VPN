@@ -824,7 +824,7 @@
     <string name="network_endpoint_note">HTTPS response timing on this network, not ICMP or in-game ping. Some services may be blocked or unavailable in your region.</string>
     <string name="network_endpoint_result">%1$s · median %2$d ms · %3$d/%4$d successful</string>
     <string name="network_endpoint_failed">%1$s · unavailable</string>
-    <string name="ai_dpi_shield_title">AI Shield · DPI Resilience</string>
+    <string name="ai_dpi_shield_title">AI NET · Network Intelligence</string>
     <string name="ai_con_title">AI CON · اتصال هوشمند</string>
     <string name="notification_action_ai_con">اجرای AI CON</string>
 </resources>
