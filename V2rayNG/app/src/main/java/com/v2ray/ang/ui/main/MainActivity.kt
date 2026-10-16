@@ -609,6 +609,10 @@ class MainActivity : HelperBaseComponentActivity() {
             startActivity(Intent(this, TelegramProxyActivity::class.java))
             return
         }
+        if (destination == MainDestination.Notifications) {
+            startActivity(Intent(this, NotificationsActivity::class.java))
+            return
+        }
         if (destination == MainDestination.Profile) {
             startActivity(Intent(this, ProfileActivity::class.java))
             return
@@ -658,6 +662,7 @@ class MainActivity : HelperBaseComponentActivity() {
             MainDestination.AiShield -> error("AI Shield is handled before building the settings intent")
             MainDestination.Device -> error("Device is handled before building the settings intent")
             MainDestination.Profile -> error("Profile is handled before building the settings intent")
+            MainDestination.Notifications -> error("Notifications is handled before building the settings intent")
             MainDestination.Logcat -> Intent(this, LogcatActivity::class.java)
             MainDestination.CheckUpdate -> Intent(this, CheckUpdateActivity::class.java)
             MainDestination.BackupRestore -> Intent(this, BackupActivity::class.java)
