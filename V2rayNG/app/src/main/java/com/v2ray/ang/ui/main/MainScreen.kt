@@ -248,6 +248,8 @@ fun MainScreen(
                     onToggle = { onAction(MainAction.ToggleService) }
                 )
                 QuickAccessPanel(
+                    onAiCon = { onAction(MainAction.GenerateAiConfig) },
+                    onAiShield = { onNavigate(MainDestination.AiShield) },
                     onCnr = { onNavigate(MainDestination.Cnr) },
                     onDevice = { onNavigate(MainDestination.Device) },
                     onTor = { onNavigate(MainDestination.TorNetwork) },
@@ -393,6 +395,8 @@ private fun ConnectionStatusHero(
 
 @Composable
 private fun QuickAccessPanel(
+    onAiCon: () -> Unit,
+    onAiShield: () -> Unit,
     onCnr: () -> Unit,
     onDevice: () -> Unit,
     onTor: () -> Unit,
@@ -408,6 +412,12 @@ private fun QuickAccessPanel(
             contentPadding = PaddingValues(horizontal = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(9.dp)
         ) {
+            item(key = "ai-con") {
+                QuickNavItem(emoji = "✦", title = "AI CON", onClick = onAiCon)
+            }
+            item(key = "ai-shield") {
+                QuickNavItem(emoji = "🛡️", title = "AI Shield", onClick = onAiShield)
+            }
             item(key = "cnr") {
                 QuickNavItem(
                     emoji = "🌐",
