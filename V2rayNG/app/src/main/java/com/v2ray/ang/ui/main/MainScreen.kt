@@ -366,7 +366,7 @@ private fun ConnectionStatusHero(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = if (isRunning) "متصل" else "قطع اتصال",
+                    text = if (isRunning) "متصل" else "آمادهٔ اتصال",
                     style = MaterialTheme.typography.labelLarge,
                     color = accent
                 )
