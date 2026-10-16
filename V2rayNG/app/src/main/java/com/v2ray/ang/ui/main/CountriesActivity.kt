@@ -57,7 +57,7 @@ class CountriesActivity : ComponentActivity() {
                     error = error,
                     onRefresh = ::loadCountries,
                     onImport = { source ->
-                        val deepLink = Uri.parse("v2rayng://install-config?url=" + Uri.encode(source.downloadUrl))
+                        val deepLink = Uri.parse("v2rayng://install-config?url=" + Uri.encode(source.downloadUrl) + "&check=1")
                         startActivity(Intent(Intent.ACTION_VIEW, deepLink))
                     },
                     onOpenIrcf = {
