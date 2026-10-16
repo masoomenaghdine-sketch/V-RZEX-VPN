@@ -1,5 +1,10 @@
 package com.v2ray.ang.ui.main
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -327,13 +332,23 @@ private fun ConnectionStatusHero(
     val cyan = Color(0xFF36E3D2)
     val violet = Color(0xFF8F6BFF)
     val accent = if (isRunning) cyan else violet
+    val glow = rememberInfiniteTransition(label = "vorzexConnectionGlow")
+    val glowAlpha by glow.animateFloat(
+        initialValue = 0.20f,
+        targetValue = 0.58f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            animation = androidx.compose.animation.core.tween(1500),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "vorzexGlowAlpha"
+    )
     val shape = RoundedCornerShape(26.dp)
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 5.dp)
-            .border(1.dp, accent.copy(alpha = 0.38f), shape),
+            .border(1.dp, accent.copy(alpha = glowAlpha), shape),
         shape = shape,
         colors = CardDefaults.cardColors(
             containerColor = Color.Transparent
