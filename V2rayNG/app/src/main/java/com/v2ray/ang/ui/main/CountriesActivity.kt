@@ -145,7 +145,13 @@ private fun CountriesScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Text(
+                "پیش از افزودن، مقصدهای TCP قابل‌آزمایش بررسی می‌شوند؛ پاسخ‌گویی TCP تضمین اتصال کامل نیست و پروتکل‌های صرفاً UDP با این آزمون تأیید نمی‌شوند.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             OutlinedTextField(
+                value = query,            OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
                 modifier = Modifier.fillMaxWidth(),
