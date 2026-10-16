@@ -1,6 +1,7 @@
 package com.v2ray.ang.ui.main
 
 import android.content.Intent
+import android.telephony.TelephonyManager
 import androidx.activity.compose.setContent
 import androidx.lifecycle.lifecycleScope
 import androidx.compose.foundation.layout.Arrangement
@@ -175,7 +176,7 @@ class AiDpiShieldActivity : BaseComponentActivity() {
                     ENDPOINTS.map { endpoint -> probe(endpoint) }
                 }
                 val access = when {
-                    snapshot.cellular -> "اینترنت همراه"
+                    snapshot.cellular -> "اینترنت همراه · ${mobileNetworkGeneration()}"
                     snapshot.wifi -> "وای‌فای"
                     else -> "سایر / نامشخص"
                 }
@@ -198,6 +199,30 @@ class AiDpiShieldActivity : BaseComponentActivity() {
             } finally {
                 running = false
             }
+        }
+    }
+
+    private fun mobileNetworkGeneration(): String {
+        val telephony = getSystemService(TELEPHONY_SERVICE) as? TelephonyManager
+            ?: return "نسل شبکه نامشخص"
+        val type = runCatching { telephony.dataNetworkType }.getOrNull()
+            ?: return "نسل شبکه نامشخص"
+        return when (type) {
+            TelephonyManager.NETWORK_TYPE_NR -> "5G"
+            TelephonyManager.NETWORK_TYPE_LTE -> "4G/LTE"
+            TelephonyManager.NETWORK_TYPE_HSPAP,
+            TelephonyManager.NETWORK_TYPE_HSPA,
+            TelephonyManager.NETWORK_TYPE_HSDPA,
+            TelephonyManager.NETWORK_TYPE_HSUPA,
+            TelephonyManager.NETWORK_TYPE_UMTS,
+            TelephonyManager.NETWORK_TYPE_EVDO_0,
+            TelephonyManager.NETWORK_TYPE_EVDO_A,
+            TelephonyManager.NETWORK_TYPE_EVDO_B -> "3G"
+            TelephonyManager.NETWORK_TYPE_GPRS,
+            TelephonyManager.NETWORK_TYPE_EDGE,
+            TelephonyManager.NETWORK_TYPE_CDMA,
+            TelephonyManager.NETWORK_TYPE_1xRTT -> "2G"
+            else -> "نسل شبکه نامشخص"
         }
     }
 
