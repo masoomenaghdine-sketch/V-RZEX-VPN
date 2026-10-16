@@ -161,25 +161,33 @@ class NetworkLabViewModel : ViewModel() {
     fun testNetworkEndpoints() {
         if (_state.value.isTestingEndpoints) return
         viewModelScope.launch {
-            _state.value = _state.value.copy(isTestingEndpoints = true, endpointResults = defaultEndpoints)
-            val results = withContext(Dispatchers.IO) {
-                coroutineScope {
-                    defaultEndpoints.map { endpoint ->
-                        async {
-                            val samples = (1..endpoint.totalSamples).map {
-                                probeHttp(endpoint.url, timeoutMs = 2500)
+            _state.value = _state.value.copy(isTestingEndpoints = true, error = null)
+            try {
+                val results = withContext(Dispatchers.IO) {
+                    coroutineScope {
+                        defaultEndpoints.map { endpoint ->
+                            async {
+                                val samples = (1..endpoint.totalSamples).map {
+                                    probeHttp(endpoint.url, timeoutMs = 2500)
+                                }
+                                endpoint.copy(
+                                    latencyMs = samples.filterNotNull().sorted().let { good ->
+                                        good.getOrNull(good.size / 2)
+                                    },
+                                    successfulSamples = samples.count { it != null },
+                                )
                             }
-                            endpoint.copy(
-                                latencyMs = samples.filterNotNull().sorted().let { good ->
-                                    good.getOrNull(good.size / 2)
-                                },
-                                successfulSamples = samples.count { it != null },
-                            )
-                        }
-                    }.awaitAll()
+                        }.awaitAll()
+                    }
                 }
+                _state.value = _state.value.copy(endpointResults = results)
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                _state.value = _state.value.copy(error = "scan_failed")
+            } finally {
+                _state.value = _state.value.copy(isTestingEndpoints = false)
             }
-            _state.value = _state.value.copy(isTestingEndpoints = false, endpointResults = results)
         }
     }
 
@@ -193,19 +201,26 @@ class NetworkLabViewModel : ViewModel() {
                 gamingLossPercent = null,
                 error = null,
             )
-            val timings = withContext(Dispatchers.IO) {
-                (1..10).map { probeHttp(AppConfig.DELAY_TEST_URL, timeoutMs = 2500) }
+            try {
+                val timings = withContext(Dispatchers.IO) {
+                    (1..10).map { probeHttp(AppConfig.DELAY_TEST_URL, timeoutMs = 2500) }
+                }
+                val good = timings.filterNotNull()
+                val average = good.takeIf { it.isNotEmpty() }?.average()?.toLong()
+                val jitter = good.zipWithNext { a, b -> abs(a - b) }
+                    .takeIf { it.isNotEmpty() }?.average()?.toLong()
+                _state.value = _state.value.copy(
+                    gamingAverageMs = average,
+                    gamingJitterMs = jitter,
+                    gamingLossPercent = ((timings.size - good.size) * 100) / timings.size,
+                )
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                _state.value = _state.value.copy(error = "scan_failed")
+            } finally {
+                _state.value = _state.value.copy(isTestingGaming = false)
             }
-            val good = timings.filterNotNull()
-            val average = good.takeIf { it.isNotEmpty() }?.average()?.toLong()
-            val jitter = good.zipWithNext { a, b -> abs(a - b) }
-                .takeIf { it.isNotEmpty() }?.average()?.toLong()
-            _state.value = _state.value.copy(
-                isTestingGaming = false,
-                gamingAverageMs = average,
-                gamingJitterMs = jitter,
-                gamingLossPercent = ((timings.size - good.size) * 100) / timings.size,
-            )
         }
     }
 
