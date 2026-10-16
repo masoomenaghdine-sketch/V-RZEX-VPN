@@ -1,5 +1,6 @@
 package com.v2ray.ang.ui.main
 
+import android.content.Intent
 import androidx.activity.compose.setContent
 import androidx.lifecycle.lifecycleScope
 import androidx.compose.foundation.layout.Arrangement
@@ -110,6 +111,40 @@ class AiDpiShieldActivity : BaseComponentActivity() {
                                 Text("۲. شبکهٔ دیگری را که مجاز به استفاده از آن هستید امتحان کنید تا مشکل اپراتور از مشکل دستگاه جدا شود.")
                                 Text("۳. تنظیمات اتصال را به حالت شناخته‌شده و معتبر برگردانید و دوباره آزمایش کنید.")
                                 Text("۴. تغییر DNS به‌تنهایی علت همهٔ خطاهای شبکه را برطرف نمی‌کند.")
+                            }
+                        }
+                    }
+                }
+                item {
+                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text("ابزارهای پایداری VØRZEX", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "AI_CON پروفایل‌های موجود روی دستگاه را بررسی می‌کند، اتصال تونل را می‌آزماید و در صورت شکست، گزینه‌های جایگزین موجود را امتحان می‌کند.",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Button(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = {
+                                    startActivity(
+                                        Intent(this@AiDpiShieldActivity, MainActivity::class.java)
+                                            .putExtra(MainActivity.EXTRA_OPEN_AI_CON, true)
+                                    )
+                                    finish()
+                                }
+                            ) { Text("اجرای AI_CON و اتصال هوشمند") }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(
+                                    modifier = Modifier.weight(1f),
+                                    onClick = { startActivity(Intent(this@AiDpiShieldActivity, CnrActivity::class.java)) }
+                                ) { Text("کانفیگ رایگان") }
+                                OutlinedButton(
+                                    modifier = Modifier.weight(1f),
+                                    onClick = { startActivity(Intent(this@AiDpiShieldActivity, CountriesActivity::class.java)) }
+                                ) { Text("کشورها") }
                             }
                         }
                     }
