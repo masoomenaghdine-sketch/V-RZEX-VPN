@@ -49,6 +49,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.R
 import com.v2ray.ang.dto.entities.ProfileItem
@@ -334,13 +335,23 @@ private fun ConnectionStatusHero(
             .border(1.dp, accent.copy(alpha = 0.38f), shape),
         shape = shape,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.58f)
+            containerColor = Color.Transparent
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = if (isRunning) {
+                            listOf(Color(0xFF102C38), Color(0xFF14243A), Color(0xFF241A42))
+                        } else {
+                            listOf(Color(0xFF171B35), Color(0xFF202044), Color(0xFF24183B))
+                        }
+                    ),
+                    shape = shape
+                )
                 .padding(horizontal = 16.dp, vertical = 13.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp)
@@ -352,7 +363,7 @@ private fun ConnectionStatusHero(
                 Text(
                     text = "VØRZEX VPN",
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = Color.White
                 )
                 Text(
                     text = if (isRunning) "اتصال فعال است" else "آمادهٔ اتصال امن",
@@ -362,7 +373,7 @@ private fun ConnectionStatusHero(
                 Text(
                     text = displayText,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = Color(0xFFD2D8F5),
                     maxLines = 2
                 )
             }
