@@ -52,7 +52,7 @@ internal data class AiNetworkSnapshot(
      * values are estimates, not a real speed test.
      */
     val constrained: Boolean
-        get() = !validated ||
+        get() = !strongUnmeteredWifi ||
             mobileGeneration in setOf("2G", "3G") ||
             (downstreamKbps > 0 && downstreamKbps < MIN_STABLE_DOWNSTREAM_KBPS) ||
             (upstreamKbps > 0 && upstreamKbps <= MIN_STABLE_UPSTREAM_KBPS) ||
