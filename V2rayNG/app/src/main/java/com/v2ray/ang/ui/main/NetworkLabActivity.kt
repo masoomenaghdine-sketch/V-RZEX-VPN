@@ -103,6 +103,7 @@ private fun NetworkLabScreen(
                         state.error?.let { error ->
                             val message = when (error) {
                                 "save_error" -> R.string.network_lab_save_error
+                                "scan_failed" -> R.string.network_lab_scan_error
                                 "no_dns" -> R.string.gaming_dns_unavailable
                                 else -> null
                             }
@@ -210,6 +211,7 @@ private fun NetworkLabScreen(
                     val message = when (error) {
                         "no_dns" -> R.string.gaming_dns_unavailable
                         "save_error" -> R.string.network_lab_save_error
+                                "scan_failed" -> R.string.network_lab_scan_error
                         else -> null
                     }
                     message?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error) }

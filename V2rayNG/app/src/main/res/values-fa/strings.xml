@@ -786,6 +786,7 @@
     <string name="network_lab_subtitle">کیفیت شبکه و DNSها را مقایسه کن</string>
     <string name="network_lab_back">بازگشت</string>
     <string name="network_lab_save_error">ذخیرهٔ تنظیم ناموفق بود؛ دوباره تلاش کن.</string>
+    <string name="network_lab_scan_error">آزمایش شبکه کامل نشد؛ اتصال را بررسی کن و دوباره تلاش کن.</string>
     <string name="dns_lab_explanation">DNSهای امن را روی مسیر شبکهٔ فعلی آزمایش می‌کنیم. سریع‌ترین نتیجه فقط یک راهنماست؛ بهترین DNS با شبکه و برنامه تغییر می‌کند.</string>
     <string name="dns_scan_button">بررسی DNSها</string>
     <string name="dns_auto_select_button">پیداکردن و اعمال سریع‌ترین DNS پاسخ‌گو</string>
