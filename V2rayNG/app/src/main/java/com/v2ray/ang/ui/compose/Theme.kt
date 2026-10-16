@@ -28,15 +28,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 private val LightColor = lightColorScheme(
-    primary = Color(0xFF5B5CE2), // VØRZEX electric blue
+    primary = Color(0xFF465BFF), // VØRZEX electric blue
     onPrimary = Color(0xFFFFFFFF), // White
     primaryContainer = Color(0xFFDDE2FF), // Pale blue
-    onPrimaryContainer = Color(0xFF5B5CE2), // VØRZEX electric blue
-    secondary = Color(0xFFB84BFF), // VØRZEX violet
+    onPrimaryContainer = Color(0xFF465BFF), // VØRZEX electric blue
+    secondary = Color(0xFF7557FF), // VØRZEX violet
     onSecondary = Color(0xFFFFFFFF), // White
     secondaryContainer = Color(0xFFEAE5FF), // Pale violet
     onSecondaryContainer = Color(0xFF2B1700), // Dark Brown
-    tertiary = Color(0xFF00E5D4), // Neon cyan
+    tertiary = Color(0xFF00D9C8), // Neon cyan
     onTertiary = Color(0xFFFFFFFF), // White
     tertiaryContainer = Color(0xFFC6FFF8), // Pale cyan
     onTertiaryContainer = Color(0xFF00201A), // Dark Teal
@@ -54,9 +54,9 @@ private val LightColor = lightColorScheme(
     outlineVariant = Color(0xFFCAC4D0), // Light Gray
     inverseSurface = Color(0xFF313033), // Dark Gray
     inverseOnSurface = Color(0xFFF4EFF4), // Very Light Gray
-    inversePrimary = Color(0xFFB9B8FF), // Electric blue
-    scrim = Color(0xFF5B5CE2), // VØRZEX electric blue
-    surfaceTint = Color(0xFF5B5CE2), // VØRZEX electric blue
+    inversePrimary = Color(0xFF9AA8FF), // Electric blue
+    scrim = Color(0xFF465BFF), // VØRZEX electric blue
+    surfaceTint = Color(0xFF465BFF), // VØRZEX electric blue
     surfaceContainerLowest = Color(0xFFFFFFFF), // White
     surfaceContainerLow = Color(0xFFF7F7F7), // Very Light Gray
     surfaceContainer = Color(0xFFF1F1F1), // Light Gray
@@ -65,15 +65,15 @@ private val LightColor = lightColorScheme(
 )
 
 private val DarkColor = darkColorScheme(
-    primary = Color(0xFFB9B8FF), // Electric blue
+    primary = Color(0xFF9AA8FF), // Electric blue
     onPrimary = Color(0xFF07101F), // Midnight navy
     primaryContainer = Color(0xFF202B4A), // Navy surface
     onPrimaryContainer = Color(0xFFDDE2FF), // Pale blue
-    secondary = Color(0xFFB84BFF), // VØRZEX violet
+    secondary = Color(0xFF7557FF), // VØRZEX violet
     onSecondary = Color(0xFF170D42), // Deep violet
     secondaryContainer = Color(0xFF30245F), // Violet surface
     onSecondaryContainer = Color(0xFFEAE5FF), // Pale violet
-    tertiary = Color(0xFF72F5E8), // Neon cyan
+    tertiary = Color(0xFF70F0FF), // Neon cyan
     onTertiary = Color(0xFF003D48), // Deep cyan
     tertiaryContainer = Color(0xFF005143), // Teal
     onTertiaryContainer = Color(0xFFC6FFF8), // Pale cyan
@@ -81,19 +81,19 @@ private val DarkColor = darkColorScheme(
     errorContainer = Color(0xFF93000A), // Dark Red
     onError = Color(0xFF690005), // Deep Red
     onErrorContainer = Color(0xFFFFDAD6), // Light Red
-    background = Color(0xFF080A14), // VØRZEX midnight
+    background = Color(0xFF090D1A), // VØRZEX midnight
     onBackground = Color(0xFFF0F3FF), // Cool white
-    surface = Color(0xFF101327), // Deep navy
+    surface = Color(0xFF0D1426), // Deep navy
     onSurface = Color(0xFFF0F3FF), // Cool white
-    surfaceVariant = Color(0xFF1A1D38), // Navy surface
+    surfaceVariant = Color(0xFF18223B), // Navy surface
     onSurfaceVariant = Color(0xFFC1CAEA), // Muted blue-white
     outline = Color(0xFF6879A8), // Blue outline
     outlineVariant = Color(0xFF283654), // Navy outline
     inverseSurface = Color(0xFFE6E1E5), // Light Gray
     inverseOnSurface = Color(0xFF1C1B1F), // Near Black
-    inversePrimary = Color(0xFF5B5CE2), // VØRZEX electric blue
-    scrim = Color(0xFF5B5CE2), // VØRZEX electric blue
-    surfaceTint = Color(0xFFB9B8FF), // Electric blue
+    inversePrimary = Color(0xFF465BFF), // VØRZEX electric blue
+    scrim = Color(0xFF465BFF), // VØRZEX electric blue
+    surfaceTint = Color(0xFF9AA8FF), // Electric blue
     surfaceContainerLowest = Color(0xFF0F0F12), // Near Black
     surfaceContainerLow = Color(0xFF1A191D), // Dark Gray
     surfaceContainer = Color(0xFF1E1D21), // Dark Gray
@@ -102,7 +102,7 @@ private val DarkColor = darkColorScheme(
 )
 
 // Semantic Colors
-val colorPing = Color(0xFF00E5D4) // Cyan
+val colorPing = Color(0xFF00D9C8) // Cyan
 val colorPingRed = Color(0xFFFF5478) // Coral red
 val colorConfigType = Color(0xFF9B7BFF) // Violet
 val colorFabActive = Color(0xFF9B7BFF) // Violet
