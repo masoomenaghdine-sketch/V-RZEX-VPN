@@ -499,7 +499,7 @@ class MainActivity : HelperBaseComponentActivity() {
                 // If stored profiles fail end-to-end checks, automatically fetch and preflight a
                 // public feed once, import only TCP-responsive endpoints, then rerun AI_CON ranking.
                 val now = SystemClock.elapsedRealtime()
-                if (now - lastAiFreeConfigFetchAtMs >= AI_FREE_CONFIG_COOLDOWN_MS) {
+                if (lastAiFreeConfigFetchAtMs == 0L || now - lastAiFreeConfigFetchAtMs >= AI_FREE_CONFIG_COOLDOWN_MS) {
                     lastAiFreeConfigFetchAtMs = now
                     retryAfterFreeImport = fetchAndImportReachableFreeConfigs()
                 }
