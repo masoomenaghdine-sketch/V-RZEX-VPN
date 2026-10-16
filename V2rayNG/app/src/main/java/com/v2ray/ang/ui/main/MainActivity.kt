@@ -270,12 +270,12 @@ class MainActivity : HelperBaseComponentActivity() {
                             "Configuration source host is not allowed"
                         }
                         val connection = parsedUrl.openConnection() as HttpURLConnection
-                        try {
+                        val rawText = try {
                             connection.connectTimeout = 8_000
                             connection.readTimeout = 12_000
                             connection.instanceFollowRedirects = false
                             require(connection.responseCode in 200..299) {
-                                "Configuration source returned HTTP ${connection.responseCode}"
+                                "Configuration source returned HTTP " + connection.responseCode
                             }
                             require(connection.contentLength <= 2 * 1024 * 1024) {
                                 "Configuration source is too large"
@@ -284,8 +284,10 @@ class MainActivity : HelperBaseComponentActivity() {
                                 .also { require(it.isNotBlank() && it.length <= 2 * 1024 * 1024) { "Configuration source is empty or too large" } }
                         } finally {
                             connection.disconnect()
-                        }.let { rawText ->
-                            if (uri.getQueryParameter("check") != "1") return@let rawText
+                        }
+                        if (uri.getQueryParameter("check") != "1") {
+                            rawText
+                        } else {
                             val checked = com.v2ray.ang.core.PublicConfigHealthFilter.filter(rawText)
                             require(checked.text.isNotBlank()) {
                                 "No TCP-reachable public config endpoints found (" + checked.candidates + " candidates)"
