@@ -31,6 +31,7 @@ object NotificationManager {
     private const val NOTIFICATION_PENDING_INTENT_STOP_V2RAY = 1
     private const val NOTIFICATION_PENDING_INTENT_RESTART_V2RAY = 2
     private const val NOTIFICATION_PENDING_INTENT_AI_SHIELD = 3
+    private const val NOTIFICATION_PENDING_INTENT_AI_CON = 4
     private const val NOTIFICATION_ICON_THRESHOLD = 3000
     private const val QUERY_INTERVAL_MS = 3000L
 
@@ -112,6 +113,15 @@ object NotificationManager {
             flags
         )
 
+        val aiConIntent = Intent(service, MainActivity::class.java)
+            .putExtra(MainActivity.EXTRA_OPEN_AI_CON, true)
+        val aiConPendingIntent = PendingIntent.getActivity(
+            service,
+            NOTIFICATION_PENDING_INTENT_AI_CON,
+            aiConIntent,
+            flags
+        )
+
         val channelId = createNotificationChannel()
 
         mBuilder = NotificationCompat.Builder(service, channelId)
@@ -125,6 +135,7 @@ object NotificationManager {
             .setOngoing(true)
             .setShowWhen(false)
             .setOnlyAlertOnce(true)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setContentIntent(contentPendingIntent)
             .addAction(
                 R.drawable.ic_delete_24dp,
@@ -140,6 +151,11 @@ object NotificationManager {
                 R.drawable.ic_shield_ai_24dp,
                 service.getString(R.string.ai_dpi_shield_title),
                 aiShieldPendingIntent
+            )
+            .addAction(
+                R.drawable.ic_shield_ai_24dp,
+                service.getString(R.string.notification_action_ai_con),
+                aiConPendingIntent
             )
 
         //mBuilder?.setDefaults(NotificationCompat.FLAG_ONLY_ALERT_ONCE)
