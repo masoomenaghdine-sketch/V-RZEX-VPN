@@ -61,7 +61,7 @@ class AiDpiShieldActivity : BaseComponentActivity() {
                         Column(modifier = Modifier.weight(1f)) {
                             Text("سپر هوشمند VØRZEX", style = MaterialTheme.typography.headlineMedium)
                             Text(
-                                "تحلیل محلی شبکه و مقاومت در برابر DPI",
+                                "عیب‌یابی محلی شبکه و پایداری اتصال",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -72,7 +72,7 @@ class AiDpiShieldActivity : BaseComponentActivity() {
                 item {
                     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)) {
                         Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("پیشنهاد هوشمند مسیر اتصال", style = MaterialTheme.typography.titleMedium)
+                            Text("تشخیص هوشمند کیفیت اتصال", style = MaterialTheme.typography.titleMedium)
                             Text(
                                 "دسترسی HTTPS و تخمین‌های شبکهٔ اندروید بررسی می‌شود تا مسیر مناسب‌تری پیشنهاد شود. تحلیل روی همین دستگاه انجام می‌شود و شناسهٔ سیم‌کارت یا گزارش عیب‌یابی ارسال نمی‌شود.",
                                 style = MaterialTheme.typography.bodyMedium
@@ -106,10 +106,10 @@ class AiDpiShieldActivity : BaseComponentActivity() {
                         Card {
                             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text("راهنمای پایداری اتصال", style = MaterialTheme.typography.titleMedium)
-                                Text("۱. اگر پروفایل‌های Xray وصل نشدند، حالت خودکار یا CDN موجود در Aether/Psiphon را امتحان کنید.")
-                                Text("۲. در صورت نیاز از پل‌های Tor استفاده کنید؛ ممکن است دسترسی بهتر شود، اما تضمینی نیست.")
-                                Text("۳. یک پروفایل سالم را به‌عنوان مسیر جایگزین نگه دارید و پس از تغییر شبکه دوباره بررسی کنید.")
-                                Text("۴. تغییر DNS به‌تنهایی نمی‌تواند DPIای را که خودِ پروتکل را مسدود کرده دور بزند.")
+                                Text("۱. اگر اتصال ناپایدار است، وضعیت اینترنت و پیام خطای برنامه را بررسی کنید.")
+                                Text("۲. شبکهٔ دیگری را که مجاز به استفاده از آن هستید امتحان کنید تا مشکل اپراتور از مشکل دستگاه جدا شود.")
+                                Text("۳. تنظیمات اتصال را به حالت شناخته‌شده و معتبر برگردانید و دوباره آزمایش کنید.")
+                                Text("۴. تغییر DNS به‌تنهایی علت همهٔ خطاهای شبکه را برطرف نمی‌کند.")
                             }
                         }
                     }
@@ -120,7 +120,7 @@ class AiDpiShieldActivity : BaseComponentActivity() {
                 item {
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "نکته: رفتار DPI به اپراتور و شبکه بستگی دارد. این صفحه دسترسی را بررسی می‌کند و از میان مسیرهای موجود پیشنهاد می‌دهد؛ دور زدن قطعی همهٔ محدودیت‌ها تضمین نمی‌شود و پروفایل‌ها بی‌اجازه تغییر نمی‌کنند.",
+                        "نکته: این صفحه فقط دسترسی HTTPS را به‌صورت محلی بررسی می‌کند؛ تشخیص قطعی نوع محدودیت شبکه یا تضمین دسترسی به همهٔ سرویس‌ها ممکن نیست. هیچ پروفایلی بی‌اجازه تغییر نمی‌کند.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -153,9 +153,9 @@ class AiDpiShieldActivity : BaseComponentActivity() {
                     outcomes.count { it } == 0 ->
                         "ابتدا حالت خودکار یا CDN موجود در Aether/Psiphon را امتحان کنید و در صورت نیاز سراغ پل‌های Tor بروید. آزمون HTTPS به‌تنهایی DPI را از اختلال عمومی شبکه تشخیص نمی‌دهد."
                     snapshot.constrained ->
-                        "ابتدا مسیر محافظه‌کارانهٔ TCP/HTTP2 را ترجیح دهید. پروفایل‌های Xray را بررسی کنید و اگر شکست خوردند حالت خودکار Aether/Psiphon را امتحان کنید."
+                        "کیفیت لینک محدود به نظر می‌رسد. برنامه‌های پس‌زمینه را کاهش دهید، نزدیک‌تر به روتر شوید یا شبکه را دوباره بررسی کنید."
                     else ->
-                        "پروفایل فعلی را معیار مقایسه نگه دارید و آن را با حالت خودکار Aether/Psiphon بسنجید. موفقیت HTTPS به معنی دسترسی UDP یا تمام مقصدها نیست."
+                        "آزمون HTTPS موفق است؛ بااین‌حال این نتیجه فقط دسترسی به چند مقصد آزمایشی را نشان می‌دهد و کیفیت همهٔ سرویس‌ها را تضمین نمی‌کند."
                 }
                 report = ShieldReport(access, outcomes.count { it }, outcomes.size, link, recommendation)
             } catch (_: Exception) {
