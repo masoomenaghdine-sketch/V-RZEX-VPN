@@ -45,6 +45,9 @@ class CnrActivity : ComponentActivity() {
                     onBackToConnect = {
                         startActivity(Intent(this, MainActivity::class.java))
                         finish()
+                    },
+                    onOpenCountries = {
+                        startActivity(Intent(this, CountriesActivity::class.java))
                     }
                 )
             }
@@ -53,7 +56,11 @@ class CnrActivity : ComponentActivity() {
 }
 
 @Composable
-private fun CnrScreen(onImport: (String) -> Unit, onBackToConnect: () -> Unit) {
+private fun CnrScreen(
+    onImport: (String) -> Unit,
+    onBackToConnect: () -> Unit,
+    onOpenCountries: () -> Unit
+) {
     val glow = rememberInfiniteTransition(label = "cnrGlow")
     val pulse by glow.animateFloat(
         initialValue = 0.78f,
@@ -97,6 +104,9 @@ private fun CnrScreen(onImport: (String) -> Unit, onBackToConnect: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text("CNR · VØRZEX VPN", modifier = Modifier.graphicsLayer(alpha = pulse), style = MaterialTheme.typography.headlineSmall, color = Color(0xFF70F0FF))
+            Button(modifier = Modifier.fillMaxWidth(), onClick = onOpenCountries) {
+                Text("🌍 کانفیگ رایگان بر اساس کشورها")
+            }
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
