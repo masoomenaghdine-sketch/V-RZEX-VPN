@@ -104,9 +104,8 @@ private fun CnrScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text("CNR · VØRZEX VPN", modifier = Modifier.graphicsLayer(alpha = pulse), style = MaterialTheme.typography.headlineSmall, color = Color(0xFF70F0FF))
-            Text("پیش از افزودن، دسترسی TCP مقصدهای قابل‌آزمایش بررسی می‌شود. این آزمون تضمین سلامت تونل نیست و پروتکل‌های صرفاً UDP مثل Hysteria2 از فیلتر TCP قابل‌سنجش نیستند.", style = MaterialTheme.typography.bodySmall, color = Color(0xFF9AA9C5))
             Button(modifier = Modifier.fillMaxWidth(), onClick = onOpenCountries) {
-                Text("🌍 کانفیگ رایگان بر اساس کشورها")
+                Text("کشورها")
             }
             LazyColumn(
                 modifier = Modifier.weight(1f),
