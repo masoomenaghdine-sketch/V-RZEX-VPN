@@ -95,7 +95,7 @@ fun MainBottomBar(
                     tint = Color.White
                 )
                 Text(
-                    text = if (isRunning) "قطع اتصال · DISCONNECT" else "اتصال امن · CONNECT VPN",
+                    text = if (isRunning) "قطع اتصال" else "اتصال VPN",
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(start = 10.dp)
                 )
