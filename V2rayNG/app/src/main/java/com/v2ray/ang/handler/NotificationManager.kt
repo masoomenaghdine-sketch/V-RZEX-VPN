@@ -15,6 +15,7 @@ import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.extension.delay
 import com.v2ray.ang.extension.toSpeedString
 import com.v2ray.ang.helper.NotificationHelper
+import com.v2ray.ang.ui.main.AiDpiShieldActivity
 import com.v2ray.ang.ui.main.MainActivity
 import com.v2ray.ang.util.LogUtil
 import kotlinx.coroutines.CoroutineScope
@@ -29,6 +30,7 @@ object NotificationManager {
     private const val NOTIFICATION_PENDING_INTENT_CONTENT = 0
     private const val NOTIFICATION_PENDING_INTENT_STOP_V2RAY = 1
     private const val NOTIFICATION_PENDING_INTENT_RESTART_V2RAY = 2
+    private const val NOTIFICATION_PENDING_INTENT_AI_SHIELD = 3
     private const val NOTIFICATION_ICON_THRESHOLD = 3000
     private const val QUERY_INTERVAL_MS = 3000L
 
@@ -102,11 +104,23 @@ object NotificationManager {
         restartV2RayIntent.putExtra("key", AppConfig.MSG_STATE_RESTART)
         val restartV2RayPendingIntent = PendingIntent.getBroadcast(service, NOTIFICATION_PENDING_INTENT_RESTART_V2RAY, restartV2RayIntent, flags)
 
+        val aiShieldIntent = Intent(service, AiDpiShieldActivity::class.java)
+        val aiShieldPendingIntent = PendingIntent.getActivity(
+            service,
+            NOTIFICATION_PENDING_INTENT_AI_SHIELD,
+            aiShieldIntent,
+            flags
+        )
+
         val channelId = createNotificationChannel()
 
         mBuilder = NotificationCompat.Builder(service, channelId)
             .setSmallIcon(R.drawable.ic_stat_name)
             .setContentTitle(currentConfig?.remarks ?: service.getString(R.string.app_name))
+            .setSubText(service.getString(R.string.app_name))
+            .setColor(Color.rgb(91, 92, 226))
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
             .setShowWhen(false)
@@ -121,6 +135,11 @@ object NotificationManager {
                 R.drawable.ic_restore_24dp,
                 service.getString(R.string.title_service_restart),
                 restartV2RayPendingIntent
+            )
+            .addAction(
+                R.drawable.ic_shield_ai_24dp,
+                service.getString(R.string.ai_dpi_shield_title),
+                aiShieldPendingIntent
             )
 
         //mBuilder?.setDefaults(NotificationCompat.FLAG_ONLY_ALERT_ONCE)
