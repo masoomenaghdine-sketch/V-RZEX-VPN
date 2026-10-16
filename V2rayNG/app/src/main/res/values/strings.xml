@@ -4,6 +4,7 @@
     
     <string name="device_title">Device</string>
 <string name="cnr_title">CNR · Free Configs</string>
+    <string name="countries_title">کشورها · کانفیگ رایگان</string>
 <string name="app_name" translatable="false">VØRZEX VPN</string>
     <string name="tor_network_title">Tor Network</string>
     <string name="tor_profile_name">Tor · VØRZEX</string>
@@ -823,4 +824,9 @@
     <string name="network_endpoint_note">HTTPS response timing on this network, not ICMP or in-game ping. Some services may be blocked or unavailable in your region.</string>
     <string name="network_endpoint_result">%1$s · median %2$d ms · %3$d/%4$d successful</string>
     <string name="network_endpoint_failed">%1$s · unavailable</string>
+    <string name="ai_dpi_shield_title">AI NET · Network Intelligence</string>
+    <string name="ai_con_title">AI CON · اتصال هوشمند</string>
+    <string name="notification_action_ai_con">اجرای AI CON</string>
+    <string name="profile_title">Profile · VØRZEX</string>
+    <string name="notifications_title">Notifications · VØRZEX</string>
 </resources>

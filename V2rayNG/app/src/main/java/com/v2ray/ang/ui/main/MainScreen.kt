@@ -1,9 +1,16 @@
 package com.v2ray.ang.ui.main
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -47,8 +54,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.R
 import com.v2ray.ang.dto.entities.ProfileItem
@@ -248,8 +258,13 @@ fun MainScreen(
                     onToggle = { onAction(MainAction.ToggleService) }
                 )
                 QuickAccessPanel(
+                    onAiCon = { onAction(MainAction.GenerateAiConfig) },
+                    onAiShield = { onNavigate(MainDestination.AiShield) },
                     onCnr = { onNavigate(MainDestination.Cnr) },
+                    onCountries = { onNavigate(MainDestination.Countries) },
                     onDevice = { onNavigate(MainDestination.Device) },
+                    onProfile = { onNavigate(MainDestination.Profile) },
+                    onNotifications = { onNavigate(MainDestination.Notifications) },
                     onTor = { onNavigate(MainDestination.TorNetwork) },
                     onSettings = { onNavigate(MainDestination.Settings) }
                 )
@@ -320,32 +335,30 @@ private fun ConnectionStatusHero(
     displayText: String,
     onToggle: () -> Unit
 ) {
-    val cyan = Color(0xFF36E3D2)
-    val violet = Color(0xFF8F6BFF)
-    val accent = if (isRunning) cyan else violet
-    val shape = RoundedCornerShape(26.dp)
+    val accent = if (isRunning) Color(0xFF36E3D2) else MaterialTheme.colorScheme.primary
+    val shape = RoundedCornerShape(20.dp)
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 5.dp)
-            .border(1.dp, accent.copy(alpha = 0.38f), shape),
+            .padding(horizontal = 12.dp, vertical = 4.dp)
+            .border(1.dp, accent.copy(alpha = 0.24f), shape),
         shape = shape,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.58f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 13.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(5.dp)
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
                     text = "VØRZEX VPN",
@@ -353,88 +366,71 @@ private fun ConnectionStatusHero(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = if (isRunning) "اتصال فعال است" else "آمادهٔ اتصال امن",
-                    style = MaterialTheme.typography.titleSmall,
+                    text = if (isRunning) "متصل" else "آمادهٔ اتصال",
+                    style = MaterialTheme.typography.labelLarge,
                     color = accent
                 )
                 Text(
                     text = displayText,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2
+                    maxLines = 1
                 )
             }
             Box(
                 modifier = Modifier
-                    .size(68.dp)
+                    .size(54.dp)
                     .background(accent.copy(alpha = 0.12f), CircleShape)
-                    .border(1.5.dp, accent.copy(alpha = 0.72f), CircleShape)
+                    .border(1.dp, accent.copy(alpha = 0.45f), CircleShape)
                     .clickable(onClick = onToggle),
                 contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(50.dp)
-                        .background(accent.copy(alpha = 0.12f), CircleShape)
-                        .border(1.dp, accent.copy(alpha = 0.35f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = if (isRunning) "Ⅱ" else "ϟ",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = accent
-                    )
-                }
+                Text(
+                    text = if (isRunning) "Ⅱ" else "ϟ",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = accent
+                )
             }
         }
     }
 }
 
-
 @Composable
 private fun QuickAccessPanel(
+    onAiCon: () -> Unit,
+    onAiShield: () -> Unit,
     onCnr: () -> Unit,
+    onCountries: () -> Unit,
     onDevice: () -> Unit,
+    onProfile: () -> Unit,
+    onNotifications: () -> Unit,
     onTor: () -> Unit,
     onSettings: () -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 6.dp, bottom = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(top = 4.dp, bottom = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         LazyRow(
             contentPadding = PaddingValues(horizontal = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(9.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            item(key = "ai-con") {
+                QuickNavItem(emoji = "✦", title = "AI_CON", onClick = onAiCon)
+            }
             item(key = "cnr") {
-                QuickNavItem(
-                    emoji = "🌐",
-                    title = "کانفیگ‌های CNR",
-                    onClick = onCnr
-                )
+                QuickNavItem(emoji = "🌐", title = "CNR", onClick = onCnr)
             }
             item(key = "tor") {
-                QuickNavItem(
-                    emoji = "🧅",
-                    title = "شبکه Tor",
-                    onClick = onTor
-                )
+                QuickNavItem(emoji = "◉", title = "Tor", onClick = onTor)
             }
             item(key = "device") {
-                QuickNavItem(
-                    emoji = "📱",
-                    title = "دستگاه",
-                    onClick = onDevice
-                )
+                QuickNavItem(emoji = "▣", title = "دستگاه", onClick = onDevice)
             }
             item(key = "settings") {
-                QuickNavItem(
-                    emoji = "⚙️",
-                    title = "تنظیمات",
-                    onClick = onSettings
-                )
+                QuickNavItem(emoji = "⚙", title = "تنظیمات", onClick = onSettings)
             }
         }
     }

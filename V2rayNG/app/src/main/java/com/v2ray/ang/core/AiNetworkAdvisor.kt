@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
+import android.telephony.TelephonyManager
 import com.v2ray.ang.enums.AetherTransport
 
 /**
@@ -25,6 +26,7 @@ internal data class AiNetworkSnapshot(
     val notSuspended: Boolean = true,
     /** True only after a real endpoint probe proves UDP/QUIC is reachable on this network. */
     val udpReachable: Boolean = false,
+    val mobileGeneration: String = "نامشخص",
 ) {
     /**
      * Strong Wi-Fi alone does not prove UDP/QUIC works: Android's bandwidth and signal estimates
@@ -44,8 +46,18 @@ internal data class AiNetworkSnapshot(
             signalDbm != null &&
             signalDbm >= MIN_HTTP3_SIGNAL_DBM
 
+    /**
+     * Cellular is not automatically slow: use the constrained Psiphon route only when the
+     * observed generation or estimated link quality indicates a weak link. Android bandwidth
+     * values are estimates, not a real speed test.
+     */
     val constrained: Boolean
-        get() = !strongUnmeteredWifi
+        get() = !strongUnmeteredWifi ||
+            mobileGeneration in setOf("2G", "3G") ||
+            (downstreamKbps > 0 && downstreamKbps < MIN_STABLE_DOWNSTREAM_KBPS) ||
+            (upstreamKbps > 0 && upstreamKbps <= MIN_STABLE_UPSTREAM_KBPS) ||
+            (signalDbm != null && signalDbm < MIN_STABLE_SIGNAL_DBM) ||
+            (!wifi && cellular && (downstreamKbps == 0 || upstreamKbps == 0))
 
     val preferredTransport: AetherTransport
         get() = if (strongUnmeteredWifi && udpReachable) AetherTransport.HTTP3 else AetherTransport.HTTP2
@@ -54,6 +66,9 @@ internal data class AiNetworkSnapshot(
         internal const val MIN_HTTP3_DOWNSTREAM_KBPS = 15_000
         internal const val MIN_HTTP3_UPSTREAM_KBPS = 3_000
         internal const val MIN_HTTP3_SIGNAL_DBM = -85
+        internal const val MIN_STABLE_DOWNSTREAM_KBPS = 5_000
+        internal const val MIN_STABLE_UPSTREAM_KBPS = 1_000
+        internal const val MIN_STABLE_SIGNAL_DBM = -105
     }
 }
 
@@ -67,6 +82,7 @@ internal object AiNetworkAdvisor {
             null
         }
         val cellular = capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) == true
+        val mobileGeneration = if (cellular) readMobileGeneration(context) else "نامشخص"
         val wifi = capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
         val signal = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             capabilities?.signalStrength?.takeIf { it != Int.MIN_VALUE && it < 0 }
@@ -85,6 +101,40 @@ internal object AiNetworkAdvisor {
                 capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_CONGESTED) != false,
             notSuspended = Build.VERSION.SDK_INT < Build.VERSION_CODES.P ||
                 capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED) != false,
+            mobileGeneration = mobileGeneration,
         )
+    }
+
+    private fun readMobileGeneration(context: Context): String {
+        return try {
+            val telephony = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
+                ?: return "نامشخص"
+            when (telephony.dataNetworkType) {
+                TelephonyManager.NETWORK_TYPE_GPRS,
+                TelephonyManager.NETWORK_TYPE_EDGE,
+                TelephonyManager.NETWORK_TYPE_CDMA,
+                TelephonyManager.NETWORK_TYPE_1xRTT,
+                TelephonyManager.NETWORK_TYPE_IDEN,
+                TelephonyManager.NETWORK_TYPE_GSM -> "2G"
+                TelephonyManager.NETWORK_TYPE_UMTS,
+                TelephonyManager.NETWORK_TYPE_EVDO_0,
+                TelephonyManager.NETWORK_TYPE_EVDO_A,
+                TelephonyManager.NETWORK_TYPE_HSDPA,
+                TelephonyManager.NETWORK_TYPE_HSUPA,
+                TelephonyManager.NETWORK_TYPE_HSPA,
+                TelephonyManager.NETWORK_TYPE_EVDO_B,
+                TelephonyManager.NETWORK_TYPE_EHRPD,
+                TelephonyManager.NETWORK_TYPE_HSPAP,
+                TelephonyManager.NETWORK_TYPE_TD_SCDMA -> "3G"
+                TelephonyManager.NETWORK_TYPE_LTE,
+                TelephonyManager.NETWORK_TYPE_IWLAN -> "4G"
+                TelephonyManager.NETWORK_TYPE_NR -> "5G"
+                else -> "نامشخص"
+            }
+        } catch (_: SecurityException) {
+            "نامشخص"
+        } catch (_: Exception) {
+            "نامشخص"
+        }
     }
 }

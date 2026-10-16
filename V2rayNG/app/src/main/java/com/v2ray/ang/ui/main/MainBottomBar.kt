@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.border
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -41,7 +44,7 @@ fun MainBottomBar(
     // Keep the original MainAction.ToggleService callback so connection behavior is unchanged.
     val accentCyan = Color(0xFF36E3D2)
     val connectedColor = accentCyan
-    val disconnectedColor = if (isDarkTheme) Color(0xFF151929) else Color(0xFF5856D6)
+    val disconnectedColor = if (isDarkTheme) Color(0xFF19172F) else Color(0xFF5856D6)
     val actionContentColor = if (isRunning) Color(0xFF04100F) else if (isDarkTheme) accentCyan else Color.White
 
     Column(
@@ -69,7 +72,7 @@ fun MainBottomBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(58.dp),
-            shape = RoundedCornerShape(30.dp),
+            shape = RoundedCornerShape(22.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = if (isRunning) connectedColor else disconnectedColor,
                 contentColor = actionContentColor

@@ -11,6 +11,8 @@ import android.view.KeyEvent
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
 import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -69,6 +71,8 @@ class MainActivity : HelperBaseComponentActivity() {
     private var pendingAetherQuickConnect = false
     private var pendingVZVExport: String? = null
     private val aiAutoConnectInProgress = AtomicBoolean(false)
+    @Volatile private var lastAiFreeConfigFetchAtMs = 0L
+    @Volatile private var preferAiNetFreeCandidates = false
     @Volatile private var suppressAiFailoverOnce = false
     @Volatile private var lastAiFailoverAtMs = 0L
     private val mainViewModel: MainViewModel by viewModels {
@@ -153,6 +157,7 @@ class MainActivity : HelperBaseComponentActivity() {
         VorzexInstallationStore(this)
         mainViewModel.onAction(MainAction.Initialize)
         handleExternalConfigIntent(intent)
+        handleAiConLaunchIntent(intent)
 
         // If an AI_CON tunnel unexpectedly stops, attempt a bounded, verified fallback.
         // Manual disconnects are explicitly suppressed; repeated failures are rate-limited.
@@ -220,6 +225,17 @@ class MainActivity : HelperBaseComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleExternalConfigIntent(intent)
+        handleAiConLaunchIntent(intent)
+    }
+
+    private fun handleAiConLaunchIntent(incoming: Intent?) {
+        if (incoming?.getBooleanExtra(EXTRA_OPEN_AI_CON, false) != true) return
+        incoming.removeExtra(EXTRA_OPEN_AI_CON)
+        lifecycleScope.launch {
+            // Let the main view model finish restoring local profiles before ranking them.
+            delay(500)
+            startAiConfigQuickSetup()
+        }
     }
 
     private fun handleExternalConfigIntent(incoming: Intent?) {
@@ -238,7 +254,59 @@ class MainActivity : HelperBaseComponentActivity() {
             }
             else -> null
         }
-        if (uri != null) {
+        if (uri != null && uri.scheme.equals("v2rayng", ignoreCase = true) && uri.host == "install-config") {
+            val remoteUrl = uri.getQueryParameter("url")
+            if (remoteUrl.isNullOrBlank()) {
+                toastError(R.string.toast_failure)
+                return
+            }
+            lifecycleScope.launch {
+                var healthSummary: String? = null
+                try {
+                    val configText = withContext(Dispatchers.IO) {
+                        val parsedUrl = URL(remoteUrl)
+                        require(parsedUrl.protocol.equals("https", ignoreCase = true)) {
+                            "Only HTTPS configuration sources are accepted"
+                        }
+                        require(parsedUrl.host.equals("raw.githubusercontent.com", ignoreCase = true)) {
+                            "Configuration source host is not allowed"
+                        }
+                        val connection = parsedUrl.openConnection() as HttpURLConnection
+                        val rawText = try {
+                            connection.connectTimeout = 8_000
+                            connection.readTimeout = 12_000
+                            connection.instanceFollowRedirects = false
+                            require(connection.responseCode in 200..299) {
+                                "Configuration source returned HTTP " + connection.responseCode
+                            }
+                            require(connection.contentLength <= 2 * 1024 * 1024) {
+                                "Configuration source is too large"
+                            }
+                            connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+                                .also { require(it.isNotBlank() && it.length <= 2 * 1024 * 1024) { "Configuration source is empty or too large" } }
+                        } finally {
+                            connection.disconnect()
+                        }
+                        if (uri.getQueryParameter("check") != "1") {
+                            rawText
+                        } else {
+                            val checked = com.v2ray.ang.core.PublicConfigHealthFilter.filter(rawText)
+                            require(checked.text.isNotBlank()) {
+                                "No TCP-reachable public config endpoints found (" + checked.candidates + " candidates)"
+                            }
+                            healthSummary = "بررسی اتصال: " + checked.reachable + " کانفیگ پاسخ‌گو از " +
+                                checked.candidates + " مقصد TCP؛ سلامت تونل هنوز باید آزمایش شود."
+                            checked.text
+                        }
+                    }
+                    mainViewModel.onAction(MainAction.ImportBatchConfig(configText))
+                    if (healthSummary != null) toast(healthSummary!!) else toastSuccess(R.string.toast_success)
+                } catch (e: Exception) {
+                    LogUtil.e(AppConfig.TAG, "Failed to import remote public configuration", e)
+                    toastError(R.string.toast_failure)
+                }
+            }
+        } else if (uri != null) {
             lifecycleScope.launch {
                 delay(350)
                 importExchangeUri(uri)
@@ -344,12 +412,20 @@ class MainActivity : HelperBaseComponentActivity() {
     private fun startAiConfigQuickSetup() {
         if (!aiAutoConnectInProgress.compareAndSet(false, true)) return
         lifecycleScope.launch {
+            var retryAfterFreeImport = false
             try {
                 // A TCP handshake only narrows the list; success requires real HTTPS traffic through the tunnel.
                 val snapshot = com.v2ray.ang.core.AiNetworkAdvisor.assess(this@MainActivity)
-                val candidates = com.v2ray.ang.core.AiConfigGenerator
+                val rankedCandidates = com.v2ray.ang.core.AiConfigGenerator
                     .rankedReachableLocalXrayProfiles(snapshot)
-                    .take(MAX_AI_AUTO_CONNECT_ATTEMPTS)
+                val candidates = if (preferAiNetFreeCandidates) {
+                    preferAiNetFreeCandidates = false
+                    rankedCandidates.filter {
+                        it.profile.remarks.orEmpty().startsWith("AI_NET_FREE_", ignoreCase = true)
+                    }.take(MAX_AI_AUTO_CONNECT_ATTEMPTS)
+                } else {
+                    rankedCandidates.take(MAX_AI_AUTO_CONNECT_ATTEMPTS)
+                }
 
                 if (candidates.isNotEmpty()) {
                     var localAiGuid = MmkvManager.decodeAllServerList().firstOrNull { guid ->
@@ -428,24 +504,88 @@ class MainActivity : HelperBaseComponentActivity() {
                     }
                 }
 
-                // Preserve the independent Aether quick-setup fallback when no local Xray profile
-                // passes the real traffic check.
-                pendingAetherQuickConnect = true
-                profileEditorLauncher.launch(
-                    Intent(this@MainActivity, ServerAetherActivity::class.java)
-                        .putExtra(ServerAetherActivity.EXTRA_AI_QUICK_SETUP, true)
-                )
+                // If stored profiles fail end-to-end checks, automatically fetch and preflight a
+                // public feed once, import only TCP-responsive endpoints, then rerun AI_CON ranking.
+                val now = SystemClock.elapsedRealtime()
+                if (lastAiFreeConfigFetchAtMs == 0L || now - lastAiFreeConfigFetchAtMs >= AI_FREE_CONFIG_COOLDOWN_MS) {
+                    lastAiFreeConfigFetchAtMs = now
+                    retryAfterFreeImport = fetchAndImportReachableFreeConfigs()
+                }
+
+                // Keep the existing independent Aether quick-setup fallback if no public candidate
+                // could be imported. A failed source fetch never blocks the app's existing modes.
+                if (!retryAfterFreeImport) {
+                    pendingAetherQuickConnect = true
+                    profileEditorLauncher.launch(
+                        Intent(this@MainActivity, ServerAetherActivity::class.java)
+                            .putExtra(ServerAetherActivity.EXTRA_AI_QUICK_SETUP, true)
+                    )
+                }
             } finally {
                 aiAutoConnectInProgress.set(false)
+            }
+            if (retryAfterFreeImport) {
+                delay(500)
+                startAiConfigQuickSetup()
             }
         }
     }
 
-    private companion object {
-        const val MAX_AI_AUTO_CONNECT_ATTEMPTS = 3
+    private suspend fun fetchAndImportReachableFreeConfigs(): Boolean {
+        return try {
+            val result = withContext(Dispatchers.IO) {
+                val source = URL(AI_FREE_CONFIG_SOURCE)
+                require(source.protocol.equals("https", ignoreCase = true) &&
+                    source.host.equals("raw.githubusercontent.com", ignoreCase = true)) {
+                    "Untrusted public config source"
+                }
+                val connection = source.openConnection() as HttpURLConnection
+                val raw = try {
+                    connection.connectTimeout = 8_000
+                    connection.readTimeout = 12_000
+                    connection.instanceFollowRedirects = false
+                    require(connection.responseCode in 200..299) {
+                        "Public config feed returned HTTP " + connection.responseCode
+                    }
+                    require(connection.contentLength <= 2 * 1024 * 1024) {
+                        "Public config feed is too large"
+                    }
+                    connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+                        .also { require(it.isNotBlank() && it.length <= 2 * 1024 * 1024) { "Public config feed is empty or too large" } }
+                } finally {
+                    connection.disconnect()
+                }
+                val filtered = com.v2ray.ang.core.PublicConfigHealthFilter.filter(raw)
+                require(filtered.text.isNotBlank()) { "No TCP-responsive public configs found" }
+                filtered
+            }
+            val existingGuids = MmkvManager.decodeAllServerList().toSet()
+            mainViewModel.onAction(MainAction.ImportBatchConfig(result.text))
+            delay(1_000)
+            val importedGuids = MmkvManager.decodeAllServerList().filterNot { it in existingGuids }
+            importedGuids.forEach { guid ->
+                val profile = MmkvManager.decodeServerConfig(guid) ?: return@forEach
+                val sourceName = profile.remarks.orEmpty().removePrefix("AI_NET_FREE_")
+                MmkvManager.encodeServerConfig(guid, profile.copy(remarks = "AI_NET_FREE_" + sourceName))
+            }
+            mainViewModel.onAction(MainAction.RefreshGroups)
+            preferAiNetFreeCandidates = importedGuids.isNotEmpty()
+            toast("AI_CON: " + result.reachable + " کانفیگ پاسخ‌گوی TCP پیدا شد؛ بررسی تونل در حال انجام است.")
+            importedGuids.isNotEmpty()
+        } catch (e: Exception) {
+            LogUtil.w(AppConfig.TAG, "AI_CON public config fallback unavailable", e)
+            false
+        }
+    }
+
+    companion object {
+        const val EXTRA_OPEN_AI_CON = "com.v2ray.ang.extra.OPEN_AI_CON"
+        const val MAX_AI_AUTO_CONNECT_ATTEMPTS = 5
         const val AI_CONNECTION_WAIT_MS = 18_000L
         const val SERVICE_STOP_WAIT_MS = 4_000L
         const val AI_FAILOVER_RETRY_DELAY_MS = 500L
+        const val AI_FREE_CONFIG_COOLDOWN_MS = 600_000L
+        const val AI_FREE_CONFIG_SOURCE = "https://raw.githubusercontent.com/MohammadBahemmat/V2ray-Collector/main/all_servers.txt"
         const val AI_FAILOVER_COOLDOWN_MS = 30_000L
         const val AI_HEALTH_CHECK_INTERVAL_MS = 30_000L
         const val AI_HEALTH_RECHECK_DELAY_MS = 3_000L
@@ -469,12 +609,32 @@ class MainActivity : HelperBaseComponentActivity() {
             startActivity(Intent(this, TelegramProxyActivity::class.java))
             return
         }
+        if (destination == MainDestination.Notifications) {
+            startActivity(Intent(this, NotificationsActivity::class.java))
+            return
+        }
+        if (destination == MainDestination.Profile) {
+            startActivity(Intent(this, ProfileActivity::class.java))
+            return
+        }
         if (destination == MainDestination.Device) {
             startActivity(Intent(this, DeviceActivity::class.java))
             return
         }
         if (destination == MainDestination.Cnr) {
             startActivity(Intent(this, CnrActivity::class.java))
+            return
+        }
+        if (destination == MainDestination.Countries) {
+            startActivity(Intent(this, CountriesActivity::class.java))
+            return
+        }
+        if (destination == MainDestination.AiCon) {
+            mainViewModel.onAction(MainAction.GenerateAiConfig)
+            return
+        }
+        if (destination == MainDestination.AiShield) {
+            startActivity(Intent(this, AiDpiShieldActivity::class.java))
             return
         }
         if (destination == MainDestination.TorNetwork) {
@@ -497,7 +657,12 @@ class MainActivity : HelperBaseComponentActivity() {
             MainDestination.TorNetwork -> error("Tor Network is handled before building the settings intent")
             MainDestination.TelegramProxy -> error("Telegram Proxy is handled before building the settings intent")
             MainDestination.Cnr -> error("CNR is handled before building the settings intent")
+            MainDestination.Countries -> error("Countries is handled before building the settings intent")
+            MainDestination.AiCon -> error("AI_CON is handled before building the settings intent")
+            MainDestination.AiShield -> error("AI Shield is handled before building the settings intent")
             MainDestination.Device -> error("Device is handled before building the settings intent")
+            MainDestination.Profile -> error("Profile is handled before building the settings intent")
+            MainDestination.Notifications -> error("Notifications is handled before building the settings intent")
             MainDestination.Logcat -> Intent(this, LogcatActivity::class.java)
             MainDestination.CheckUpdate -> Intent(this, CheckUpdateActivity::class.java)
             MainDestination.BackupRestore -> Intent(this, BackupActivity::class.java)

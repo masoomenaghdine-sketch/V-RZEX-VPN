@@ -61,7 +61,11 @@
                 android:value="true" />
         </service>
 
+        <activity android:name=".ui.main.NotificationsActivity" android:exported="false" />
+        <activity android:name=".ui.main.ProfileActivity" android:exported="false" />
         <activity android:name=".ui.main.CnrActivity" android:exported="false" />
+        <activity android:name=".ui.main.CountriesActivity" android:exported="false" />
+        <activity android:name=".ui.main.AiDpiShieldActivity" android:exported="false" />
         <activity android:name=".ui.main.DeviceActivity" android:exported="false" />
         <activity android:name=".ui.main.NetworkLabActivity" android:exported="false" />
         <activity android:name=".ui.main.TelegramProxyActivity" android:exported="false" />
