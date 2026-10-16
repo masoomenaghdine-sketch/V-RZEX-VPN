@@ -443,8 +443,8 @@ private fun QuickAccessPanel(
             item(key = "ai-con") {
                 QuickNavItem(emoji = "✦", title = "AI CON", onClick = onAiCon)
             }
-            item(key = "ai-shield") {
-                QuickNavItem(emoji = "🛡️", title = "AI Shield", onClick = onAiShield)
+            item(key = "ai-net") {
+                QuickNavItem(emoji = "🛡️", title = "AI NET", onClick = onAiShield)
             }
             item(key = "cnr") {
                 QuickNavItem(
