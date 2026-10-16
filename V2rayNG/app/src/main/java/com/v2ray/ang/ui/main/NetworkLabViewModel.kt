@@ -134,9 +134,17 @@ class NetworkLabViewModel : ViewModel() {
     }
 
     fun applyDns(coreAddress: String) {
+        // Never replace the current resolver with an untested or failed community endpoint.
         val resolver = _state.value.resolvers.firstOrNull {
-            it.coreAddress == coreAddress && it.coreAddress.startsWith("https://")
-        } ?: return
+            it.coreAddress == coreAddress &&
+                it.coreAddress.startsWith("https://", ignoreCase = true) &&
+                it.successful == true &&
+                it.latencyMs != null
+        }
+        if (resolver == null) {
+            _state.value = _state.value.copy(error = "dns_not_verified")
+            return
+        }
         val stored = MmkvManager.encodeSettings(AppConfig.PREF_REMOTE_DNS, resolver.coreAddress)
         if (!stored) {
             _state.value = _state.value.copy(error = "save_error")
@@ -145,7 +153,6 @@ class NetworkLabViewModel : ViewModel() {
         SettingsChangeManager.notifySettingChanged(AppConfig.PREF_REMOTE_DNS)
         _state.value = _state.value.copy(selectedDns = resolver.coreAddress, error = null)
     }
-
     fun setGamingEnabled(enabled: Boolean) {
         val stored = MmkvManager.encodeSettings(AppConfig.PREF_GAMING_MODE, enabled)
         if (stored) {
