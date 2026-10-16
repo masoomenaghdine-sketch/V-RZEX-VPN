@@ -49,9 +49,13 @@ internal object PublicConfigHealthFilter {
             when (scheme) {
                 "vless", "trojan", "ss", "socks", "http" -> {
                     val uri = URI(line)
-                    val host = uri.host?.trim('[', ']')?.takeIf { it.isNotBlank() } ?: return null
-                    val port = uri.port.takeIf { it in 1..65535 } ?: return null
-                    if (scheme == "ss" && uri.host == null) parseShadowsocks(line) else host to port
+                    if (scheme == "ss" && uri.host.isNullOrBlank()) {
+                        parseShadowsocks(line)
+                    } else {
+                        val host = uri.host?.trim('[', ']')?.takeIf { it.isNotBlank() } ?: return null
+                        val port = uri.port.takeIf { it in 1..65535 } ?: return null
+                        host to port
+                    }
                 }
                 "vmess" -> {
                     val payload = line.substringAfter("://", "").substringBefore('#')
