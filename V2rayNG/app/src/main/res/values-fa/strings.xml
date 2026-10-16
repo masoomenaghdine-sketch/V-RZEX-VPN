@@ -812,4 +812,5 @@
     <string name="countries_title">کشورها · کانفیگ رایگان</string>
     <string name="ai_dpi_shield_title">AI Shield · بررسی مقاومت شبکه</string>
     <string name="ai_con_title">AI CON · ساخت و اتصال هوشمند</string>
+    <string name="notification_action_ai_con">اجرای AI CON</string>
 </resources>
