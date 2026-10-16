@@ -60,7 +60,7 @@ class AiDpiShieldActivity : BaseComponentActivity() {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("سپر هوشمند VØRZEX", style = MaterialTheme.typography.headlineMedium)
+                            Text("AI NET · VØRZEX", style = MaterialTheme.typography.headlineMedium)
                             Text(
                                 "عیب‌یابی محلی شبکه و پایداری اتصال",
                                 style = MaterialTheme.typography.bodyMedium,
