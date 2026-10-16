@@ -48,7 +48,7 @@ internal object PublicConfigHealthFilter {
             val scheme = line.substringBefore("://", "").lowercase()
             when (scheme) {
                 "vless", "trojan", "ss", "socks", "http" -> {
-                    val uri = URI(line)
+                    val uri = URI(line.substringBefore('#'))
                     if (scheme == "ss" && uri.host.isNullOrBlank()) {
                         parseShadowsocks(line)
                     } else {
