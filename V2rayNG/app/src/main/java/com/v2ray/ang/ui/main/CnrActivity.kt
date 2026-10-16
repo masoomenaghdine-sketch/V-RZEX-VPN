@@ -39,7 +39,7 @@ class CnrActivity : ComponentActivity() {
             MaterialTheme {
                 CnrScreen(
                     onImport = { url ->
-                        val deepLink = Uri.parse("v2rayng://install-config?url=" + Uri.encode(url))
+                        val deepLink = Uri.parse("v2rayng://install-config?url=" + Uri.encode(url) + "&check=1")
                         startActivity(Intent(Intent.ACTION_VIEW, deepLink))
                     },
                     onBackToConnect = {
