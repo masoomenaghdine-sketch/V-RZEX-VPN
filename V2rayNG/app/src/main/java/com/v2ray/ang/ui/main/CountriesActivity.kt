@@ -19,11 +19,13 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -130,6 +132,8 @@ private fun CountriesScreen(
     onOpenIrcf: () -> Unit,
     onBack: () -> Unit
 ) {
+    var query by remember { mutableStateOf("") }
+    val filteredCountries = countries.filter { it.name.contains(query.trim(), ignoreCase = true) }
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
             modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -140,6 +144,14 @@ private fun CountriesScreen(
                 "کانفیگ‌های عمومی بر اساس کشور. فهرست از مخزن SoliSpirit دریافت می‌شود؛ IRCF نیز همین مجموعه را برای دسته‌بندی مکانی نمایش می‌دهد.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                label = { Text("جست‌وجوی کشور") },
+                placeholder = { Text("مثلاً Germany یا DE") }
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = onOpenIrcf, modifier = Modifier.weight(1f)) {
@@ -160,7 +172,7 @@ private fun CountriesScreen(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(countries, key = { it.downloadUrl }) { country ->
+                items(filteredCountries, key = { it.downloadUrl }) { country ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
@@ -174,6 +186,9 @@ private fun CountriesScreen(
                         }
                     }
                 }
+            }
+            if (!loading && query.isNotBlank() && filteredCountries.isEmpty()) {
+                Text("کشوری با این نام پیدا نشد.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Text(
                 "هشدار: کانفیگ‌های عمومی ممکن است از کار افتاده، کند یا نامطمئن باشند. قبل از اتصال، منبع و تنظیمات را بررسی کن.",
