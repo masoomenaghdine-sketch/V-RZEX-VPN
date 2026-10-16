@@ -259,6 +259,7 @@ class MainActivity : HelperBaseComponentActivity() {
                 return
             }
             lifecycleScope.launch {
+                var healthSummary: String? = null
                 try {
                     val configText = withContext(Dispatchers.IO) {
                         val parsedUrl = URL(remoteUrl)
@@ -283,10 +284,19 @@ class MainActivity : HelperBaseComponentActivity() {
                                 .also { require(it.isNotBlank() && it.length <= 2 * 1024 * 1024) { "Configuration source is empty or too large" } }
                         } finally {
                             connection.disconnect()
+                        }.let { rawText ->
+                            if (uri.getQueryParameter("check") != "1") return@let rawText
+                            val checked = com.v2ray.ang.core.PublicConfigHealthFilter.filter(rawText)
+                            require(checked.text.isNotBlank()) {
+                                "No TCP-reachable public config endpoints found (" + checked.candidates + " candidates)"
+                            }
+                            healthSummary = "بررسی اتصال: " + checked.reachable + " کانفیگ پاسخ‌گو از " +
+                                checked.candidates + " مقصد TCP؛ سلامت تونل هنوز باید آزمایش شود."
+                            checked.text
                         }
                     }
                     mainViewModel.onAction(MainAction.ImportBatchConfig(configText))
-                    toastSuccess(R.string.toast_success)
+                    if (healthSummary != null) toast(healthSummary!!) else toastSuccess(R.string.toast_success)
                 } catch (e: Exception) {
                     LogUtil.e(AppConfig.TAG, "Failed to import remote public configuration", e)
                     toastError(R.string.toast_failure)
@@ -497,7 +507,7 @@ class MainActivity : HelperBaseComponentActivity() {
 
     companion object {
         const val EXTRA_OPEN_AI_CON = "com.v2ray.ang.extra.OPEN_AI_CON"
-        const val MAX_AI_AUTO_CONNECT_ATTEMPTS = 3
+        const val MAX_AI_AUTO_CONNECT_ATTEMPTS = 5
         const val AI_CONNECTION_WAIT_MS = 18_000L
         const val SERVICE_STOP_WAIT_MS = 4_000L
         const val AI_FAILOVER_RETRY_DELAY_MS = 500L
