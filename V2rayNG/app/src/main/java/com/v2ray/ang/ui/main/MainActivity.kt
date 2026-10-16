@@ -71,6 +71,7 @@ class MainActivity : HelperBaseComponentActivity() {
     private var pendingAetherQuickConnect = false
     private var pendingVZVExport: String? = null
     private val aiAutoConnectInProgress = AtomicBoolean(false)
+    @Volatile private var lastAiFreeConfigFetchAtMs = 0L
     @Volatile private var suppressAiFailoverOnce = false
     @Volatile private var lastAiFailoverAtMs = 0L
     private val mainViewModel: MainViewModel by viewModels {
@@ -410,6 +411,7 @@ class MainActivity : HelperBaseComponentActivity() {
     private fun startAiConfigQuickSetup() {
         if (!aiAutoConnectInProgress.compareAndSet(false, true)) return
         lifecycleScope.launch {
+            var retryAfterFreeImport = false
             try {
                 // A TCP handshake only narrows the list; success requires real HTTPS traffic through the tunnel.
                 val snapshot = com.v2ray.ang.core.AiNetworkAdvisor.assess(this@MainActivity)
@@ -494,16 +496,68 @@ class MainActivity : HelperBaseComponentActivity() {
                     }
                 }
 
-                // Preserve the independent Aether quick-setup fallback when no local Xray profile
-                // passes the real traffic check.
-                pendingAetherQuickConnect = true
-                profileEditorLauncher.launch(
-                    Intent(this@MainActivity, ServerAetherActivity::class.java)
-                        .putExtra(ServerAetherActivity.EXTRA_AI_QUICK_SETUP, true)
-                )
+                // If stored profiles fail end-to-end checks, automatically fetch and preflight a
+                // public feed once, import only TCP-responsive endpoints, then rerun AI_CON ranking.
+                val now = SystemClock.elapsedRealtime()
+                if (now - lastAiFreeConfigFetchAtMs >= AI_FREE_CONFIG_COOLDOWN_MS) {
+                    lastAiFreeConfigFetchAtMs = now
+                    retryAfterFreeImport = fetchAndImportReachableFreeConfigs()
+                }
+
+                // Keep the existing independent Aether quick-setup fallback if no public candidate
+                // could be imported. A failed source fetch never blocks the app's existing modes.
+                if (!retryAfterFreeImport) {
+                    pendingAetherQuickConnect = true
+                    profileEditorLauncher.launch(
+                        Intent(this@MainActivity, ServerAetherActivity::class.java)
+                            .putExtra(ServerAetherActivity.EXTRA_AI_QUICK_SETUP, true)
+                    )
+                }
             } finally {
                 aiAutoConnectInProgress.set(false)
             }
+            if (retryAfterFreeImport) {
+                delay(500)
+                startAiConfigQuickSetup()
+            }
+        }
+    }
+
+    private suspend fun fetchAndImportReachableFreeConfigs(): Boolean {
+        return try {
+            val result = withContext(Dispatchers.IO) {
+                val source = URL(AI_FREE_CONFIG_SOURCE)
+                require(source.protocol.equals("https", ignoreCase = true) &&
+                    source.host.equals("raw.githubusercontent.com", ignoreCase = true)) {
+                    "Untrusted public config source"
+                }
+                val connection = source.openConnection() as HttpURLConnection
+                val raw = try {
+                    connection.connectTimeout = 8_000
+                    connection.readTimeout = 12_000
+                    connection.instanceFollowRedirects = false
+                    require(connection.responseCode in 200..299) {
+                        "Public config feed returned HTTP " + connection.responseCode
+                    }
+                    require(connection.contentLength <= 2 * 1024 * 1024) {
+                        "Public config feed is too large"
+                    }
+                    connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+                        .also { require(it.isNotBlank() && it.length <= 2 * 1024 * 1024) { "Public config feed is empty or too large" } }
+                } finally {
+                    connection.disconnect()
+                }
+                val filtered = com.v2ray.ang.core.PublicConfigHealthFilter.filter(raw)
+                require(filtered.text.isNotBlank()) { "No TCP-responsive public configs found" }
+                filtered
+            }
+            mainViewModel.onAction(MainAction.ImportBatchConfig(result.text))
+            mainViewModel.onAction(MainAction.RefreshGroups)
+            toast("AI_CON: " + result.reachable + " کانفیگ پاسخ‌گوی TCP پیدا شد؛ بررسی تونل در حال انجام است.")
+            true
+        } catch (e: Exception) {
+            LogUtil.w(AppConfig.TAG, "AI_CON public config fallback unavailable", e)
+            false
         }
     }
 
@@ -513,6 +567,8 @@ class MainActivity : HelperBaseComponentActivity() {
         const val AI_CONNECTION_WAIT_MS = 18_000L
         const val SERVICE_STOP_WAIT_MS = 4_000L
         const val AI_FAILOVER_RETRY_DELAY_MS = 500L
+        const val AI_FREE_CONFIG_COOLDOWN_MS = 600_000L
+        const val AI_FREE_CONFIG_SOURCE = "https://raw.githubusercontent.com/MohammadBahemmat/V2ray-Collector/main/all_servers.txt"
         const val AI_FAILOVER_COOLDOWN_MS = 30_000L
         const val AI_HEALTH_CHECK_INTERVAL_MS = 30_000L
         const val AI_HEALTH_RECHECK_DELAY_MS = 3_000L
