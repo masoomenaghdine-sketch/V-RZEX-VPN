@@ -39,6 +39,7 @@ enum class MainDestination(@DrawableRes val iconRes: Int, @StringRes val labelRe
     TorNetwork(R.drawable.ic_settings_24dp, R.string.tor_network_title),
     TelegramProxy(R.drawable.ic_file_24dp, R.string.telegram_proxy_title),
     Cnr(R.drawable.ic_file_24dp, R.string.cnr_title),
+    AiCon(R.drawable.ic_shield_ai_24dp, R.string.ai_con_title),
     AiShield(R.drawable.ic_shield_ai_24dp, R.string.ai_dpi_shield_title),
     Device(R.drawable.ic_about_24dp, R.string.device_title),
     Promotion(R.drawable.ic_promotion_24dp, R.string.title_pref_promotion),
@@ -57,6 +58,7 @@ private val primaryDrawerItems = listOf(
     MainDestination.TorNetwork,
     MainDestination.TelegramProxy,
     MainDestination.Cnr,
+    MainDestination.AiCon,
     MainDestination.AiShield,
     MainDestination.Device
 )
