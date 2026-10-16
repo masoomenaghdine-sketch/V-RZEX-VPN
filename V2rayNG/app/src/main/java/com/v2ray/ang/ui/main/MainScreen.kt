@@ -9,6 +9,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -52,6 +54,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
@@ -372,7 +376,7 @@ private fun ConnectionStatusHero(
         ) {
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(7.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     Box(
@@ -381,7 +385,7 @@ private fun ConnectionStatusHero(
                             .background(accent, CircleShape)
                     )
                     Text(
-                        text = if (isRunning) "CONNECTED · اتصال برقرار" else "READY · آمادهٔ اتصال",
+                        text = if (isRunning) "CONNECTED · اتصال برقرار" else "SYSTEM READY · آمادهٔ اتصال",
                         style = MaterialTheme.typography.labelMedium,
                         color = accent
                     )
@@ -392,30 +396,38 @@ private fun ConnectionStatusHero(
                     color = Color.White
                 )
                 Text(
+                    text = "Freedom Beyond Borders",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color(0xFFB9A8FF)
+                )
+                Text(
                     text = displayText,
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFFD7D9F2),
                     maxLines = 2
                 )
                 Text(
-                    text = if (isRunning) "برای قطع اتصال لمس کن" else "اتصال سریع و مدیریت هوشمند شبکه",
+                    text = if (isRunning) "برای قطع اتصال لمس کن" else "اتصال هوشمند · حریم خصوصی · آزادی",
                     style = MaterialTheme.typography.labelSmall,
                     color = Color(0xFFB8B8D8)
                 )
             }
-            Box(
-                modifier = Modifier
-                    .size(76.dp)
-                    .background(accent.copy(alpha = 0.10f), CircleShape)
-                    .border(1.5.dp, accent.copy(alpha = 0.72f), CircleShape)
-                    .clickable(onClick = onToggle),
-                contentAlignment = Alignment.Center
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                androidx.compose.foundation.Image(
+                    painter = painterResource(id = R.drawable.vorzex_mascot),
+                    contentDescription = "VØRZEX AI mascot",
+                    modifier = Modifier.size(66.dp),
+                    contentScale = ContentScale.Fit
+                )
                 Box(
                     modifier = Modifier
                         .size(58.dp)
                         .background(accent.copy(alpha = 0.12f), CircleShape)
-                        .border(1.dp, accent.copy(alpha = 0.35f), CircleShape),
+                        .border(1.5.dp, accent.copy(alpha = 0.72f), CircleShape)
+                        .clickable(onClick = onToggle),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -476,7 +488,12 @@ private fun QuickAccessPanel(
                         .border(1.dp, Color(0xFF9B7BFF).copy(alpha = 0.45f), RoundedCornerShape(15.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("✦", style = MaterialTheme.typography.headlineMedium, color = Color(0xFFC6B7FF))
+                    androidx.compose.foundation.Image(
+                        painter = painterResource(id = R.drawable.vorzex_mascot),
+                        contentDescription = null,
+                        modifier = Modifier.size(36.dp),
+                        contentScale = ContentScale.Fit
+                    )
                 }
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text("AI CON", style = MaterialTheme.typography.titleLarge, color = Color.White)
