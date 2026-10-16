@@ -813,4 +813,5 @@
     <string name="ai_dpi_shield_title">AI NET · تحلیل هوشمند شبکه</string>
     <string name="ai_con_title">AI CON · ساخت و اتصال هوشمند</string>
     <string name="notification_action_ai_con">اجرای AI CON</string>
+    <string name="profile_title">پروفایل · VØRZEX</string>
 </resources>
