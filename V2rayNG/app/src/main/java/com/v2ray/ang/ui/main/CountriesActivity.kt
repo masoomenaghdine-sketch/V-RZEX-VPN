@@ -151,7 +151,6 @@ private fun CountriesScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             OutlinedTextField(
-                value = query,            OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
                 modifier = Modifier.fillMaxWidth(),
