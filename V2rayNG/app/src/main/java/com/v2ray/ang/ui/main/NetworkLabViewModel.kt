@@ -70,56 +70,66 @@ class NetworkLabViewModel : ViewModel() {
         if (_state.value.isScanningDns) return
         viewModelScope.launch {
             _state.value = _state.value.copy(isScanningDns = true, error = null)
-            val results = withContext(Dispatchers.IO) {
-                // Keep the three well-known choices, then sample across the community DoH list.
-                // A remote list is untrusted input: accept HTTPS URLs only and cap the scan size.
-                val discovered = fetchPublicDohResolvers()
-                val candidates = (defaultResolvers + discovered)
-                    .distinctBy { it.coreAddress }
-                    .take(MAX_RESOLVERS_PER_SCAN)
-                coroutineScope {
-                    candidates.map { resolver ->
-                        async {
-                            // Keep the UI's "3/3 responses" claim accurate for every resolver.
-                            // Three samples also make the median less sensitive to one transient spike.
-                            val attempts = 3
-                            val samples = mutableListOf<Long>()
-                            repeat(attempts) {
-                                val elapsed = probeHttp(resolver.testUrl, timeoutMs = 1800)
-                                if (elapsed != null) samples += elapsed
+            try {
+                val results = withContext(Dispatchers.IO) {
+                    // Keep the three well-known choices, then sample a bounded community DoH list.
+                    // The remote list is untrusted input: accept HTTPS URLs only and cap scan size.
+                    val discovered = fetchPublicDohResolvers()
+                    val candidates = (defaultResolvers + discovered)
+                        .distinctBy { it.coreAddress }
+                        .take(MAX_RESOLVERS_PER_SCAN)
+                    coroutineScope {
+                        candidates.map { resolver ->
+                            async {
+                                // Three samples make the median less sensitive to a transient spike.
+                                val attempts = 3
+                                val samples = mutableListOf<Long>()
+                                repeat(attempts) {
+                                    val elapsed = probeHttp(resolver.testUrl, timeoutMs = 1800)
+                                    if (elapsed != null) samples += elapsed
+                                }
+                                resolver.copy(
+                                    latencyMs = samples.sorted().getOrNull(samples.size / 2),
+                                    successful = samples.size == attempts,
+                                )
                             }
-                            resolver.copy(
-                                latencyMs = samples.sorted().getOrNull(samples.size / 2),
-                                successful = samples.size == attempts,
-                            )
-                        }
-                    }.awaitAll()
-                }.sortedWith(compareBy<DnsResolverResult> { it.successful != true }
-                    .thenBy { it.latencyMs ?: Long.MAX_VALUE })
-            }
+                        }.awaitAll()
+                    }.sortedWith(
+                        compareBy<DnsResolverResult> { it.successful != true }
+                            .thenBy { it.latencyMs ?: Long.MAX_VALUE }
+                    )
+                }
 
-            var selectedDns = _state.value.selectedDns
-            var error: String? = null
-            if (autoApplyBest) {
-                val best = results.firstOrNull {
-                    it.successful == true && it.latencyMs != null &&
-                        it.coreAddress.startsWith("https://", ignoreCase = true)
+                var selectedDns = _state.value.selectedDns
+                var error: String? = null
+                if (autoApplyBest) {
+                    val best = results.firstOrNull {
+                        it.successful == true && it.latencyMs != null &&
+                            it.coreAddress.startsWith("https://", ignoreCase = true)
+                    }
+                    if (best == null) {
+                        // Never overwrite a working/previous choice with an untested fallback.
+                        error = "no_dns"
+                    } else if (MmkvManager.encodeSettings(AppConfig.PREF_REMOTE_DNS, best.coreAddress)) {
+                        SettingsChangeManager.notifySettingChanged(AppConfig.PREF_REMOTE_DNS)
+                        selectedDns = best.coreAddress
+                    } else {
+                        error = "save_error"
+                    }
                 }
-                if (best == null) {
-                    error = "no_dns"
-                } else if (MmkvManager.encodeSettings(AppConfig.PREF_REMOTE_DNS, best.coreAddress)) {
-                    SettingsChangeManager.notifySettingChanged(AppConfig.PREF_REMOTE_DNS)
-                    selectedDns = best.coreAddress
-                } else {
-                    error = "save_error"
-                }
+                _state.value = _state.value.copy(
+                    resolvers = results,
+                    selectedDns = selectedDns,
+                    error = error,
+                )
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                _state.value = _state.value.copy(error = "scan_failed")
+            } finally {
+                // A network exception must not leave the UI spinner permanently active.
+                _state.value = _state.value.copy(isScanningDns = false)
             }
-            _state.value = _state.value.copy(
-                resolvers = results,
-                isScanningDns = false,
-                selectedDns = selectedDns,
-                error = error,
-            )
         }
     }
 
@@ -216,7 +226,10 @@ class NetworkLabViewModel : ViewModel() {
         return try {
             if (connection.responseCode !in 200..299) return emptyList()
             val endpoints = connection.inputStream.bufferedReader().useLines { lines ->
-                val valid = lines.map { it.trim() }
+                val valid = lines
+                    .take(MAX_REMOTE_DOH_LINES)
+                    .map { it.trim() }
+                    .filter { it.length <= MAX_RESOLVER_URL_LENGTH }
                     .filter { it.startsWith("https://", ignoreCase = true) }
                     .distinct()
                     .toList()
@@ -232,7 +245,14 @@ class NetworkLabViewModel : ViewModel() {
             endpoints.mapNotNull { endpoint ->
                 val uri = runCatching { Uri.parse(endpoint) }.getOrNull() ?: return@mapNotNull null
                 val host = uri.host?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
-                if (uri.scheme != "https" || host.equals("localhost", ignoreCase = true)) {
+                if (
+                    uri.scheme != "https" ||
+                    uri.userInfo != null ||
+                    host.equals("localhost", ignoreCase = true) ||
+                    host.equals("127.0.0.1") ||
+                    host.equals("::1") ||
+                    uri.port !in -1..65535
+                ) {
                     return@mapNotNull null
                 }
                 DnsResolverResult(
@@ -318,6 +338,8 @@ class NetworkLabViewModel : ViewModel() {
             "https://raw.githubusercontent.com/10ium/Public-DNS-Collector/main/lists/doh.txt"
         private const val COMMUNITY_RESOLVERS_PER_SCAN = 18
         private const val MAX_RESOLVERS_PER_SCAN = 21
+        private const val MAX_REMOTE_DOH_LINES = 1_000
+        private const val MAX_RESOLVER_URL_LENGTH = 2_048
 
         val defaultEndpoints = listOf(
             NetworkEndpointResult("Google", "https://www.google.com/generate_204"),
