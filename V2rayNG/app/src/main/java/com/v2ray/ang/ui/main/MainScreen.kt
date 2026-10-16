@@ -252,6 +252,7 @@ fun MainScreen(
                     onAiCon = { onAction(MainAction.GenerateAiConfig) },
                     onAiShield = { onNavigate(MainDestination.AiShield) },
                     onCnr = { onNavigate(MainDestination.Cnr) },
+                    onCountries = { onNavigate(MainDestination.Countries) },
                     onDevice = { onNavigate(MainDestination.Device) },
                     onTor = { onNavigate(MainDestination.TorNetwork) },
                     onSettings = { onNavigate(MainDestination.Settings) }
@@ -409,6 +410,7 @@ private fun QuickAccessPanel(
     onAiCon: () -> Unit,
     onAiShield: () -> Unit,
     onCnr: () -> Unit,
+    onCountries: () -> Unit,
     onDevice: () -> Unit,
     onTor: () -> Unit,
     onSettings: () -> Unit
@@ -434,6 +436,13 @@ private fun QuickAccessPanel(
                     emoji = "🌐",
                     title = "کانفیگ‌های CNR",
                     onClick = onCnr
+                )
+            }
+            item(key = "countries") {
+                QuickNavItem(
+                    emoji = "🌍",
+                    title = "کشورها",
+                    onClick = onCountries
                 )
             }
             item(key = "tor") {
