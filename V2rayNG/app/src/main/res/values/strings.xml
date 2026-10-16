@@ -826,4 +826,5 @@
     <string name="network_endpoint_failed">%1$s · unavailable</string>
     <string name="ai_dpi_shield_title">AI Shield · DPI Resilience</string>
     <string name="ai_con_title">AI CON · اتصال هوشمند</string>
+    <string name="notification_action_ai_con">اجرای AI CON</string>
 </resources>
