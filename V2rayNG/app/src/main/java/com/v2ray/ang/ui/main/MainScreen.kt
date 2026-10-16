@@ -263,6 +263,7 @@ fun MainScreen(
                     onCnr = { onNavigate(MainDestination.Cnr) },
                     onCountries = { onNavigate(MainDestination.Countries) },
                     onDevice = { onNavigate(MainDestination.Device) },
+                    onProfile = { onNavigate(MainDestination.Profile) },
                     onTor = { onNavigate(MainDestination.TorNetwork) },
                     onSettings = { onNavigate(MainDestination.Settings) }
                 )
@@ -448,6 +449,7 @@ private fun QuickAccessPanel(
     onCnr: () -> Unit,
     onCountries: () -> Unit,
     onDevice: () -> Unit,
+    onProfile: () -> Unit,
     onTor: () -> Unit,
     onSettings: () -> Unit
 ) {
@@ -524,6 +526,9 @@ private fun QuickAccessPanel(
             }
             item(key = "device") {
                 QuickNavItem(emoji = "📱", title = "دستگاه", onClick = onDevice)
+            }
+            item(key = "profile") {
+                QuickNavItem(emoji = "👤", title = "پروفایل", onClick = onProfile)
             }
             item(key = "settings") {
                 QuickNavItem(emoji = "⚙️", title = "تنظیمات", onClick = onSettings)
