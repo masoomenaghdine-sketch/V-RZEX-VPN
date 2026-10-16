@@ -43,6 +43,7 @@ enum class MainDestination(@DrawableRes val iconRes: Int, @StringRes val labelRe
     AiCon(R.drawable.ic_shield_ai_24dp, R.string.ai_con_title),
     AiShield(R.drawable.ic_shield_ai_24dp, R.string.ai_dpi_shield_title),
     Device(R.drawable.ic_about_24dp, R.string.device_title),
+    Profile(R.drawable.ic_about_24dp, R.string.profile_title),
     Promotion(R.drawable.ic_promotion_24dp, R.string.title_pref_promotion),
     Logcat(R.drawable.ic_logcat_24dp, R.string.title_logcat),
     CheckUpdate(R.drawable.ic_check_update_24dp, R.string.update_check_for_update),
@@ -62,7 +63,8 @@ private val primaryDrawerItems = listOf(
     MainDestination.Countries,
     MainDestination.AiCon,
     MainDestination.AiShield,
-    MainDestination.Device
+    MainDestination.Device,
+    MainDestination.Profile
 )
 
 private val drawerItems = primaryDrawerItems + listOf(
