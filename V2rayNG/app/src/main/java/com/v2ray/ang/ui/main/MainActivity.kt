@@ -153,6 +153,7 @@ class MainActivity : HelperBaseComponentActivity() {
         VorzexInstallationStore(this)
         mainViewModel.onAction(MainAction.Initialize)
         handleExternalConfigIntent(intent)
+        handleAiConLaunchIntent(intent)
 
         // If an AI_CON tunnel unexpectedly stops, attempt a bounded, verified fallback.
         // Manual disconnects are explicitly suppressed; repeated failures are rate-limited.
@@ -220,6 +221,17 @@ class MainActivity : HelperBaseComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleExternalConfigIntent(intent)
+        handleAiConLaunchIntent(intent)
+    }
+
+    private fun handleAiConLaunchIntent(incoming: Intent?) {
+        if (incoming?.getBooleanExtra(EXTRA_OPEN_AI_CON, false) != true) return
+        incoming.removeExtra(EXTRA_OPEN_AI_CON)
+        lifecycleScope.launch {
+            // Let the main view model finish restoring local profiles before ranking them.
+            delay(500)
+            startAiConfigQuickSetup()
+        }
     }
 
     private fun handleExternalConfigIntent(incoming: Intent?) {
@@ -441,7 +453,8 @@ class MainActivity : HelperBaseComponentActivity() {
         }
     }
 
-    private companion object {
+    companion object {
+        const val EXTRA_OPEN_AI_CON = "com.v2ray.ang.extra.OPEN_AI_CON"
         const val MAX_AI_AUTO_CONNECT_ATTEMPTS = 3
         const val AI_CONNECTION_WAIT_MS = 18_000L
         const val SERVICE_STOP_WAIT_MS = 4_000L
