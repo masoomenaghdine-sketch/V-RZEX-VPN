@@ -62,6 +62,7 @@
         </service>
 
         <activity android:name=".ui.main.CnrActivity" android:exported="false" />
+        <activity android:name=".ui.main.CountriesActivity" android:exported="false" />
         <activity android:name=".ui.main.AiDpiShieldActivity" android:exported="false" />
         <activity android:name=".ui.main.DeviceActivity" android:exported="false" />
         <activity android:name=".ui.main.NetworkLabActivity" android:exported="false" />
