@@ -252,7 +252,7 @@ class MainActivity : HelperBaseComponentActivity() {
             }
             else -> null
         }
-        if (uri?.scheme.equals("v2rayng", ignoreCase = true) && uri?.host == "install-config") {
+        if (uri != null && uri.scheme.equals("v2rayng", ignoreCase = true) && uri.host == "install-config") {
             val remoteUrl = uri.getQueryParameter("url")
             if (remoteUrl.isNullOrBlank()) {
                 toastError(R.string.toast_failure)
