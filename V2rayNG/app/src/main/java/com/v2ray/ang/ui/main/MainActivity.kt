@@ -276,7 +276,7 @@ class MainActivity : HelperBaseComponentActivity() {
                             require(connection.responseCode in 200..299) {
                                 "Configuration source returned HTTP ${connection.responseCode}"
                             }
-                            require(connection.contentLengthLong <= 2L * 1024L * 1024L) {
+                            require(connection.contentLength <= 2 * 1024 * 1024) {
                                 "Configuration source is too large"
                             }
                             connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
