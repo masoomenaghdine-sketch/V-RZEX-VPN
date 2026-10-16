@@ -800,6 +800,7 @@
     <string name="network_lab_subtitle">Measure network quality and compare DNS providers</string>
     <string name="network_lab_back">Back</string>
     <string name="network_lab_save_error">Could not save the setting. Please try again.</string>
+    <string name="dns_not_verified">Test this DNS first. Only a verified HTTPS resolver can be applied.</string>
     <string name="network_lab_scan_error">The network test could not finish. Check your connection and try again.</string>
     <string name="dns_lab_explanation">Test DNS-over-HTTPS endpoints using the current network route. The fastest result is only a guide; the best resolver can vary by network and app.</string>
     <string name="dns_scan_button">Scan DNS providers</string>
