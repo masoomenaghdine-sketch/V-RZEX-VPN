@@ -59,22 +59,22 @@ class AiDpiShieldActivity : BaseComponentActivity() {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("AI Shield", style = MaterialTheme.typography.headlineMedium)
+                            Text("سپر هوشمند VØRZEX", style = MaterialTheme.typography.headlineMedium)
                             Text(
-                                "DPI resilience · local network analysis",
+                                "تحلیل محلی شبکه و مقاومت در برابر DPI",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        OutlinedButton(onClick = { finish() }) { Text("Back") }
+                        OutlinedButton(onClick = { finish() }) { Text("بازگشت") }
                     }
                 }
                 item {
                     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)) {
                         Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("Network-aware recommendations", style = MaterialTheme.typography.titleMedium)
+                            Text("پیشنهاد هوشمند مسیر اتصال", style = MaterialTheme.typography.titleMedium)
                             Text(
-                                "Checks HTTPS reachability and Android's network estimates, then suggests a conservative path. Analysis runs on this device; no SIM identifiers or diagnostic report are uploaded.",
+                                "دسترسی HTTPS و تخمین‌های شبکهٔ اندروید بررسی می‌شود تا مسیر مناسب‌تری پیشنهاد شود. تحلیل روی همین دستگاه انجام می‌شود و شناسهٔ سیم‌کارت یا گزارش عیب‌یابی ارسال نمی‌شود.",
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             Button(
@@ -83,21 +83,21 @@ class AiDpiShieldActivity : BaseComponentActivity() {
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 if (running) CircularProgressIndicator()
-                                else Text("Analyze this connection")
+                                else Text("تحلیل این اتصال")
                             }
                         }
                     }
                 }
-                if (running) item { Text("Testing HTTPS endpoints…", color = MaterialTheme.colorScheme.primary) }
+                if (running) item { Text("در حال بررسی دسترسی HTTPS…", color = MaterialTheme.colorScheme.primary) }
                 report?.let { result ->
                     item {
                         Card {
                             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text("Analysis", style = MaterialTheme.typography.titleLarge)
-                                Text("Access: ${result.access}")
-                                Text("HTTPS checks passed: ${result.passed}/${result.total}")
-                                Text("Link estimate: ${result.link}")
-                                Text("Suggested starting point", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                                Text("نتیجهٔ تحلیل", style = MaterialTheme.typography.titleLarge)
+                                Text("شبکه: ${result.access}")
+                                Text("آزمون‌های موفق HTTPS: ${result.passed} از ${result.total}")
+                                Text("تخمین لینک: ${result.link}")
+                                Text("مسیر پیشنهادی برای شروع", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                                 Text(result.recommendation, style = MaterialTheme.typography.bodyLarge)
                             }
                         }
@@ -105,22 +105,22 @@ class AiDpiShieldActivity : BaseComponentActivity() {
                     item {
                         Card {
                             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text("Resilience playbook", style = MaterialTheme.typography.titleMedium)
-                                Text("1. If ordinary Xray profiles fail, test the existing Aether/Psiphon automatic or CDN mode.")
-                                Text("2. If Tor is needed, use the existing Tor bridge options; bridges may improve reachability but are not guaranteed.")
-                                Text("3. Keep a known-working profile as fallback and compare results after network changes.")
-                                Text("4. A DNS change alone cannot defeat DPI that blocks the transport itself.")
+                                Text("راهنمای پایداری اتصال", style = MaterialTheme.typography.titleMedium)
+                                Text("۱. اگر پروفایل‌های Xray وصل نشدند، حالت خودکار یا CDN موجود در Aether/Psiphon را امتحان کنید.")
+                                Text("۲. در صورت نیاز از پل‌های Tor استفاده کنید؛ ممکن است دسترسی بهتر شود، اما تضمینی نیست.")
+                                Text("۳. یک پروفایل سالم را به‌عنوان مسیر جایگزین نگه دارید و پس از تغییر شبکه دوباره بررسی کنید.")
+                                Text("۴. تغییر DNS به‌تنهایی نمی‌تواند DPIای را که خودِ پروتکل را مسدود کرده دور بزند.")
                             }
                         }
                     }
                 }
                 if (error) item {
-                    Text("Analysis could not finish. Check your network and try again.", color = MaterialTheme.colorScheme.error)
+                    Text("تحلیل کامل نشد؛ شبکه را بررسی کنید و دوباره تلاش کنید.", color = MaterialTheme.colorScheme.error)
                 }
                 item {
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Important: DPI behaviour depends on the operator and network. This screen measures reachability and recommends existing transports; it does not promise universal censorship bypass or silently rewrite your profiles.",
+                        "نکته: رفتار DPI به اپراتور و شبکه بستگی دارد. این صفحه دسترسی را بررسی می‌کند و از میان مسیرهای موجود پیشنهاد می‌دهد؛ دور زدن قطعی همهٔ محدودیت‌ها تضمین نمی‌شود و پروفایل‌ها بی‌اجازه تغییر نمی‌کنند.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -140,22 +140,22 @@ class AiDpiShieldActivity : BaseComponentActivity() {
                     ENDPOINTS.map { endpoint -> probe(endpoint) }
                 }
                 val access = when {
-                    snapshot.cellular -> "Mobile data"
-                    snapshot.wifi -> "Wi-Fi"
-                    else -> "Other / unknown"
+                    snapshot.cellular -> "اینترنت همراه"
+                    snapshot.wifi -> "وای‌فای"
+                    else -> "سایر / نامشخص"
                 }
                 val link = if (snapshot.downstreamKbps > 0) {
-                    "${snapshot.downstreamKbps} kbps down · ${snapshot.upstreamKbps} kbps up"
+                    "دریافت ${snapshot.downstreamKbps} کیلوبیت · ارسال ${snapshot.upstreamKbps} کیلوبیت"
                 } else {
-                    "Unavailable"
+                    "در دسترس نیست"
                 }
                 val recommendation = when {
                     outcomes.count { it } == 0 ->
-                        "Start with the existing Aether/Psiphon automatic or CDN mode, then consider Tor bridges if required. HTTPS tests alone cannot distinguish DPI from general connectivity failure."
+                        "ابتدا حالت خودکار یا CDN موجود در Aether/Psiphon را امتحان کنید و در صورت نیاز سراغ پل‌های Tor بروید. آزمون HTTPS به‌تنهایی DPI را از اختلال عمومی شبکه تشخیص نمی‌دهد."
                     snapshot.constrained ->
-                        "Prefer a conservative TCP/HTTP2-based path first. Test existing Xray profiles, then Aether/Psiphon automatic mode if they fail."
+                        "ابتدا مسیر محافظه‌کارانهٔ TCP/HTTP2 را ترجیح دهید. پروفایل‌های Xray را بررسی کنید و اگر شکست خوردند حالت خودکار Aether/Psiphon را امتحان کنید."
                     else ->
-                        "Keep the current profile as baseline and compare it with Aether/Psiphon automatic mode. A successful HTTPS check does not prove UDP or every destination is reachable."
+                        "پروفایل فعلی را معیار مقایسه نگه دارید و آن را با حالت خودکار Aether/Psiphon بسنجید. موفقیت HTTPS به معنی دسترسی UDP یا تمام مقصدها نیست."
                 }
                 report = ShieldReport(access, outcomes.count { it }, outcomes.size, link, recommendation)
             } catch (_: Exception) {
