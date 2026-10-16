@@ -61,6 +61,7 @@
                 android:value="true" />
         </service>
 
+        <activity android:name=".ui.main.ProfileActivity" android:exported="false" />
         <activity android:name=".ui.main.CnrActivity" android:exported="false" />
         <activity android:name=".ui.main.CountriesActivity" android:exported="false" />
         <activity android:name=".ui.main.AiDpiShieldActivity" android:exported="false" />
