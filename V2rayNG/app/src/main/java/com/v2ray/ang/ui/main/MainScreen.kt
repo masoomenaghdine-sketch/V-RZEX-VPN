@@ -329,31 +329,29 @@ private fun ConnectionStatusHero(
     displayText: String,
     onToggle: () -> Unit
 ) {
-    val cyan = Color(0xFF36E3D2)
-    val violet = Color(0xFF8F6BFF)
+    val cyan = Color(0xFF43F5D0)
+    val violet = Color(0xFF9B7BFF)
     val accent = if (isRunning) cyan else violet
     val glow = rememberInfiniteTransition(label = "vorzexConnectionGlow")
     val glowAlpha by glow.animateFloat(
-        initialValue = 0.20f,
-        targetValue = 0.58f,
-        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
-            animation = androidx.compose.animation.core.tween(1500),
+        initialValue = 0.18f,
+        targetValue = 0.48f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1700),
             repeatMode = RepeatMode.Reverse
         ),
         label = "vorzexGlowAlpha"
     )
-    val shape = RoundedCornerShape(26.dp)
+    val shape = RoundedCornerShape(28.dp)
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 5.dp)
+            .padding(horizontal = 14.dp, vertical = 7.dp)
             .border(1.dp, accent.copy(alpha = glowAlpha), shape),
         shape = shape,
-        colors = CardDefaults.cardColors(
-            containerColor = Color.Transparent
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Row(
             modifier = Modifier
@@ -361,56 +359,68 @@ private fun ConnectionStatusHero(
                 .background(
                     brush = Brush.linearGradient(
                         colors = if (isRunning) {
-                            listOf(Color(0xFF102C38), Color(0xFF14243A), Color(0xFF241A42))
+                            listOf(Color(0xFF092E35), Color(0xFF122C40), Color(0xFF211A43))
                         } else {
-                            listOf(Color(0xFF171B35), Color(0xFF202044), Color(0xFF24183B))
+                            listOf(Color(0xFF17172F), Color(0xFF222044), Color(0xFF301B48))
                         }
                     ),
                     shape = shape
                 )
-                .padding(horizontal = 16.dp, vertical = 13.dp),
+                .padding(horizontal = 18.dp, vertical = 17.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(5.dp)
+                verticalArrangement = Arrangement.spacedBy(7.dp)
             ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(accent, CircleShape)
+                    )
+                    Text(
+                        text = if (isRunning) "CONNECTED · اتصال برقرار" else "READY · آمادهٔ اتصال",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = accent
+                    )
+                }
                 Text(
                     text = "VØRZEX VPN",
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.headlineSmall,
                     color = Color.White
-                )
-                Text(
-                    text = if (isRunning) "اتصال فعال است" else "آمادهٔ اتصال امن",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = accent
                 )
                 Text(
                     text = displayText,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFFD2D8F5),
+                    color = Color(0xFFD7D9F2),
                     maxLines = 2
+                )
+                Text(
+                    text = if (isRunning) "برای قطع اتصال لمس کن" else "اتصال سریع و مدیریت هوشمند شبکه",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color(0xFFB8B8D8)
                 )
             }
             Box(
                 modifier = Modifier
-                    .size(68.dp)
-                    .background(accent.copy(alpha = 0.12f), CircleShape)
+                    .size(76.dp)
+                    .background(accent.copy(alpha = 0.10f), CircleShape)
                     .border(1.5.dp, accent.copy(alpha = 0.72f), CircleShape)
                     .clickable(onClick = onToggle),
                 contentAlignment = Alignment.Center
             ) {
                 Box(
                     modifier = Modifier
-                        .size(50.dp)
+                        .size(58.dp)
                         .background(accent.copy(alpha = 0.12f), CircleShape)
                         .border(1.dp, accent.copy(alpha = 0.35f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = if (isRunning) "Ⅱ" else "ϟ",
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = MaterialTheme.typography.headlineLarge,
                         color = accent
                     )
                 }
@@ -418,7 +428,6 @@ private fun ConnectionStatusHero(
         }
     }
 }
-
 
 @Composable
 private fun QuickAccessPanel(
@@ -430,56 +439,77 @@ private fun QuickAccessPanel(
     onTor: () -> Unit,
     onSettings: () -> Unit
 ) {
+    val shape = RoundedCornerShape(24.dp)
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 6.dp, bottom = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(top = 3.dp, bottom = 9.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp)
+                .border(1.dp, Color(0xFF8F78FF).copy(alpha = 0.52f), shape)
+                .clickable(onClick = onAiCon),
+            shape = shape,
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+            elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.linearGradient(
+                            listOf(Color(0xFF25204A), Color(0xFF1A3450), Color(0xFF143A43))
+                        ),
+                        shape
+                    )
+                    .padding(horizontal = 16.dp, vertical = 13.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(Color(0xFF9B7BFF).copy(alpha = 0.16f), RoundedCornerShape(15.dp))
+                        .border(1.dp, Color(0xFF9B7BFF).copy(alpha = 0.45f), RoundedCornerShape(15.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("✦", style = MaterialTheme.typography.headlineMedium, color = Color(0xFFC6B7FF))
+                }
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text("AI CON", style = MaterialTheme.typography.titleLarge, color = Color.White)
+                    Text(
+                        "ساخت پروفایل، آزمایش اتصال و انتخاب خودکار",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFD5D8F0)
+                    )
+                }
+                Text("شروع ←", style = MaterialTheme.typography.labelLarge, color = Color(0xFF73F2DE))
+            }
+        }
         LazyRow(
-            contentPadding = PaddingValues(horizontal = 12.dp),
+            contentPadding = PaddingValues(horizontal = 14.dp),
             horizontalArrangement = Arrangement.spacedBy(9.dp)
         ) {
-            item(key = "ai-con") {
-                QuickNavItem(emoji = "✦", title = "AI CON", onClick = onAiCon)
-            }
             item(key = "ai-net") {
-                QuickNavItem(emoji = "🛡️", title = "AI NET", onClick = onAiShield)
+                QuickNavItem(emoji = "◈", title = "AI NET", onClick = onAiShield)
             }
             item(key = "cnr") {
-                QuickNavItem(
-                    emoji = "🌐",
-                    title = "کانفیگ‌های CNR",
-                    onClick = onCnr
-                )
+                QuickNavItem(emoji = "🌐", title = "کانفیگ‌های CNR", onClick = onCnr)
             }
             item(key = "countries") {
-                QuickNavItem(
-                    emoji = "🌍",
-                    title = "کشورها",
-                    onClick = onCountries
-                )
+                QuickNavItem(emoji = "🌍", title = "کشورها", onClick = onCountries)
             }
             item(key = "tor") {
-                QuickNavItem(
-                    emoji = "🧅",
-                    title = "شبکه Tor",
-                    onClick = onTor
-                )
+                QuickNavItem(emoji = "🧅", title = "شبکه Tor", onClick = onTor)
             }
             item(key = "device") {
-                QuickNavItem(
-                    emoji = "📱",
-                    title = "دستگاه",
-                    onClick = onDevice
-                )
+                QuickNavItem(emoji = "📱", title = "دستگاه", onClick = onDevice)
             }
             item(key = "settings") {
-                QuickNavItem(
-                    emoji = "⚙️",
-                    title = "تنظیمات",
-                    onClick = onSettings
-                )
+                QuickNavItem(emoji = "⚙️", title = "تنظیمات", onClick = onSettings)
             }
         }
     }
