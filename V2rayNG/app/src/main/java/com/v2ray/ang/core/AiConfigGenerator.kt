@@ -58,7 +58,10 @@ internal object AiConfigGenerator {
 
         // Probe a bounded shortlist concurrently so a large local list cannot stall AI setup.
         val shortlist = stored.sortedWith(
-            compareByDescending<Candidate> { isVlessReality(it.profile) }
+            compareByDescending<Candidate> {
+                it.profile.remarks.orEmpty().startsWith("AI_NET_FREE_", ignoreCase = true)
+            }
+                .thenByDescending { isVlessReality(it.profile) }
                 .thenBy { it.pingMillis.takeIf { ping -> ping > 0L } ?: Long.MAX_VALUE }
         ).take(MAX_LIVE_PROBES)
 
