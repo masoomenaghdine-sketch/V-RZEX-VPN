@@ -55,7 +55,7 @@ internal data class AiNetworkSnapshot(
         get() = !validated ||
             mobileGeneration in setOf("2G", "3G") ||
             (downstreamKbps > 0 && downstreamKbps < MIN_STABLE_DOWNSTREAM_KBPS) ||
-            (upstreamKbps > 0 && upstreamKbps < MIN_STABLE_UPSTREAM_KBPS) ||
+            (upstreamKbps > 0 && upstreamKbps <= MIN_STABLE_UPSTREAM_KBPS) ||
             (signalDbm != null && signalDbm < MIN_STABLE_SIGNAL_DBM) ||
             (!wifi && cellular && (downstreamKbps == 0 || upstreamKbps == 0))
 
