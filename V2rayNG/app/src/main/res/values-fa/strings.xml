@@ -803,4 +803,8 @@
     <string name="gaming_dns_selected">DNS انتخاب‌شده برای حالت گیمینگ: %1$s</string>
     <string name="gaming_dns_unavailable">هیچ DNS آزمایش‌شده‌ای پاسخ موفق نداد؛ تنظیم قبلی DNS حفظ شد.</string>
     <string name="telegram_proxy_title">PT · پروکسی تلگرام</string>
+    <string name="network_endpoint_test_button">آزمایش گوگل، کلادفلر، یوتیوب و اینستاگرام</string>
+    <string name="network_endpoint_note">زمان پاسخ HTTPS روی شبکهٔ فعلی است؛ پینگ ICMP یا پینگ واقعی داخل بازی نیست. ممکن است بعضی سرویس‌ها در منطقهٔ شما مسدود یا در دسترس نباشند.</string>
+    <string name="network_endpoint_result">%1$s · میانه %2$d میلی‌ثانیه · %3$d از %4$d موفق</string>
+    <string name="network_endpoint_failed">%1$s · در دسترس نیست</string>
 </resources>

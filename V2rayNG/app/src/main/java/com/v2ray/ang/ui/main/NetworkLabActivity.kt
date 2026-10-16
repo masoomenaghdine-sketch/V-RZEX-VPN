@@ -44,6 +44,7 @@ class NetworkLabActivity : BaseComponentActivity() {
             onApplyDns = viewModel::applyDns,
             onGamingToggle = viewModel::setGamingEnabled,
             onTestGaming = viewModel::testGamingNetwork,
+            onTestEndpoints = viewModel::testNetworkEndpoints,
         )
     }
 
@@ -64,6 +65,7 @@ private fun NetworkLabScreen(
     onApplyDns: (String) -> Unit,
     onGamingToggle: (Boolean) -> Unit,
     onTestGaming: () -> Unit,
+    onTestEndpoints: () -> Unit,
 ) {
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
@@ -127,6 +129,39 @@ private fun NetworkLabScreen(
                         }
                         state.gamingLossPercent?.let {
                             Text(stringResource(R.string.gaming_loss, it))
+                        }
+                        Text(
+                            stringResource(R.string.network_endpoint_note),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Button(
+                            onClick = onTestEndpoints,
+                            enabled = !state.isTestingEndpoints,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            if (state.isTestingEndpoints) CircularProgressIndicator()
+                            else Text(stringResource(R.string.network_endpoint_test_button))
+                        }
+                        state.endpointResults.forEach { endpoint ->
+                            val resultText = if (endpoint.successfulSamples == 0 && endpoint.latencyMs == null) {
+                                stringResource(R.string.network_endpoint_failed, endpoint.name)
+                            } else {
+                                stringResource(
+                                    R.string.network_endpoint_result,
+                                    endpoint.name,
+                                    endpoint.latencyMs ?: 0L,
+                                    endpoint.successfulSamples,
+                                    endpoint.totalSamples,
+                                )
+                            }
+                            Text(
+                                resultText,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (endpoint.successfulSamples == endpoint.totalSamples) {
+                                    MaterialTheme.colorScheme.primary
+                                } else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
                     }
                 }
