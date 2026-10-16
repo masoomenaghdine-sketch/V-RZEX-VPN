@@ -72,6 +72,7 @@ class MainActivity : HelperBaseComponentActivity() {
     private var pendingVZVExport: String? = null
     private val aiAutoConnectInProgress = AtomicBoolean(false)
     @Volatile private var lastAiFreeConfigFetchAtMs = 0L
+    @Volatile private var preferAiNetFreeCandidates = false
     @Volatile private var suppressAiFailoverOnce = false
     @Volatile private var lastAiFailoverAtMs = 0L
     private val mainViewModel: MainViewModel by viewModels {
@@ -415,9 +416,16 @@ class MainActivity : HelperBaseComponentActivity() {
             try {
                 // A TCP handshake only narrows the list; success requires real HTTPS traffic through the tunnel.
                 val snapshot = com.v2ray.ang.core.AiNetworkAdvisor.assess(this@MainActivity)
-                val candidates = com.v2ray.ang.core.AiConfigGenerator
+                val rankedCandidates = com.v2ray.ang.core.AiConfigGenerator
                     .rankedReachableLocalXrayProfiles(snapshot)
-                    .take(MAX_AI_AUTO_CONNECT_ATTEMPTS)
+                val candidates = if (preferAiNetFreeCandidates) {
+                    preferAiNetFreeCandidates = false
+                    rankedCandidates.filter {
+                        it.profile.remarks.orEmpty().startsWith("AI_NET_FREE_", ignoreCase = true)
+                    }.take(MAX_AI_AUTO_CONNECT_ATTEMPTS)
+                } else {
+                    rankedCandidates.take(MAX_AI_AUTO_CONNECT_ATTEMPTS)
+                }
 
                 if (candidates.isNotEmpty()) {
                     var localAiGuid = MmkvManager.decodeAllServerList().firstOrNull { guid ->
@@ -551,10 +559,19 @@ class MainActivity : HelperBaseComponentActivity() {
                 require(filtered.text.isNotBlank()) { "No TCP-responsive public configs found" }
                 filtered
             }
+            val existingGuids = MmkvManager.decodeAllServerList().toSet()
             mainViewModel.onAction(MainAction.ImportBatchConfig(result.text))
+            delay(1_000)
+            val importedGuids = MmkvManager.decodeAllServerList().filterNot { it in existingGuids }
+            importedGuids.forEach { guid ->
+                val profile = MmkvManager.decodeServerConfig(guid) ?: return@forEach
+                val sourceName = profile.remarks.orEmpty().removePrefix("AI_NET_FREE_")
+                MmkvManager.encodeServerConfig(guid, profile.copy(remarks = "AI_NET_FREE_" + sourceName))
+            }
             mainViewModel.onAction(MainAction.RefreshGroups)
+            preferAiNetFreeCandidates = importedGuids.isNotEmpty()
             toast("AI_CON: " + result.reachable + " کانفیگ پاسخ‌گوی TCP پیدا شد؛ بررسی تونل در حال انجام است.")
-            true
+            importedGuids.isNotEmpty()
         } catch (e: Exception) {
             LogUtil.w(AppConfig.TAG, "AI_CON public config fallback unavailable", e)
             false
